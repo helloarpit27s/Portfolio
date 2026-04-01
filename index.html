@@ -108,9 +108,7 @@
     .dvl{width:56px;height:1px;background:var(--bdrb);margin:0 auto 80px;}
 
     h6{
-  margin-left:600px;
   position: relative;
-  
 }
 
     /* HOME CARDS */
@@ -126,6 +124,16 @@
     .cl{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
     .cl::after{content:'→';transition:transform .2s;}
     .pc:hover .cl::after{transform:translateX(4px);}
+
+
+    .required-indicator {
+    font-size: 0.8rem; /* Make it smaller */
+    color: #888888; /* A muted gray so it doesn't compete with the button */
+    font-style: italic; /* Adds a subtle typographic contrast */
+    margin-top: 10px; /* Gives it breathing room if it's below the button */
+    display: block; 
+    letter-spacing: 0.5px;
+}
 
     /* PAGE HEADER */
     .ph{padding:160px 52px 72px;max-width:1240px;margin:0 auto;}
@@ -211,10 +219,72 @@
     .ebtn.red:hover{background:rgba(255,75,75,.1);}
     .g{color:var(--green);}
 
-    @media(max-width:600px){
-      #nav{padding:18px 20px;} #nls{gap:16px;} .nli{font-size:10px;}
-      .sec,.ph,.pgr2,.bls,.aly,.cly{padding-left:20px;padding-right:20px;}
-      footer{flex-direction:column;gap:10px;text-align:center;}
+    /* ── TOUCH DEVICES: disable custom cursor ── */
+    @media (hover:none),(pointer:coarse){
+      body{cursor:auto;}
+      #cursor-dot,#cursor-ring,#cursor-text,#cursor-canvas{display:none!important;}
+    }
+
+    /* ── TABLET 768px ── */
+    @media(max-width:768px){
+      #nav{padding:16px 24px;}
+      #nls{gap:18px;}
+      .nli{font-size:10px;letter-spacing:.09em;}
+      .sec{padding:64px 28px;}
+      .ph{padding:120px 28px 56px;}
+      .pgr2{padding:0 28px 80px;}
+      .bls,.cly{padding-left:28px;padding-right:28px;}
+      .aly{padding-left:28px;padding-right:28px;}
+      #bpfv{padding:120px 28px 80px;}
+    }
+
+    /* ── MOBILE 520px ── */
+    @media(max-width:520px){
+      /* Nav — wrap onto two rows if needed, tighter gaps */
+      #nav{padding:14px 16px;}
+      #nls{gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+      .nli{font-size:9px;letter-spacing:.07em;}
+
+      /* Hero */
+      #hero{padding:100px 16px 48px;}
+      .hname{font-size:clamp(54px,20vw,96px);}
+      .hcta{gap:10px;}
+      .btn{padding:11px 18px;font-size:10px;}
+
+      /* Sections */
+      .sec{padding:48px 16px;}
+      .ph{padding:100px 16px 40px;}
+      .pgr2{padding:0 16px 64px;grid-template-columns:1fr;}
+      .bls{padding-left:16px;padding-right:16px;}
+      .aly{padding-left:16px;padding-right:16px;gap:36px;}
+      .cly{padding-left:16px;padding-right:16px;}
+
+      /* Blog post full view */
+      #bpfv{padding:90px 16px 60px;}
+      .pbdy{font-size:14px;}
+      .pbdy h2{font-size:20px;}
+
+      /* Error popup — prevent overflow */
+      #erp{width:calc(100vw - 28px);right:14px;left:auto;bottom:14px;}
+
+      /* Footer */
+      footer{flex-direction:column;gap:10px;text-align:center;padding:28px 16px;}
+
+      /* Project cards */
+      .pgr{grid-template-columns:1fr;}
+
+      /* Splash screen */
+      #st{font-size:11px;}
+      #se{padding:10px 24px;font-size:11px;}
+    }
+
+    /* ── VERY SMALL 380px ── */
+    @media(max-width:380px){
+      #nl{font-size:15px;}
+      #nls{gap:7px;}
+      .nli{font-size:8.5px;}
+      .hname{font-size:clamp(46px,22vw,80px);}
+      .stit{font-size:clamp(30px,9vw,52px);}
     }
   </style>
 </head>
@@ -325,7 +395,7 @@
     <div class="prj rv" onclick="window.location.href='pages/neunet.html'"><div class="ptg">Machine Learning</div><div class="pttl">Neural Network from Scratch</div>
       <div class="pdsc">No PyTorch. No TensorFlow. Just NumPy, pain, and the sheer audacity to backpropagate by hand. 92% MNIST accuracy. My confidence: considerably lower.</div>
       <div class="tch"><span class="tt">Python</span><span class="tt">NumPy</span><span class="tt">Math (sadly)</span></div></div>
-    <div class="prj rv" onclick="window.location.href='pages/stellar_sim.html'"><div class="ptg">Astrophysics</div><div class="pttl">Stellar Object Visualizer</div>
+    <div class="prj rv" onclick="window.location.href='pages/blackholesim.html'"><div class="ptg">Astrophysics</div><div class="pttl">Stellar Object Visualizer</div>
       <div class="pdsc">Interactive, scientifically-accurate 3D visualization of stellar phenomena — including Black Holes, Pulsars, and Main Sequence stars, featuring relativistic effects.</div>
       <div class="tch"><span class="tt">Three.js</span><span class="tt">WebGL</span><span class="tt">GLSL</span></div></div>
     <div class="prj rv"><div class="ptg">Quantum Computing</div><div class="pttl">Quantum Gates Playground</div>
@@ -432,6 +502,7 @@
     <form class="cfm rv" method="POST" action="https://api.web3forms.com/submit">
        <input type="hidden" name="access_key" value="e076a615-d73d-498e-9145-d2609e16d13c">
       <div class="fg">
+        <p class="required-indicator">* for necessary fields</p>
         <label class="fl">Name*</label>
         <input id="contact_name" name="name" class="fi2" type="text" required placeholder="Your name (aliases accepted, judgement not)" />
       </div>
@@ -449,7 +520,6 @@
       </div>
       <button type="submit" id="fbtn" class="btn bp" style="align-self:flex-start">Send Message</button>
     </form>
-    <h6>* - necessary field</h6>
   </div>
   <footer>
     <div class="ftr">Aditya Pratap Singh<br><span style="color:#252530">© No rights reserved. Inspired by the entire internet.</span></div>

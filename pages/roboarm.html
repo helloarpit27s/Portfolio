@@ -235,6 +235,40 @@ pre{font-family:var(--f1);font-size:11px;line-height:1.85;overflow-x:auto;tab-si
 #tip{position:fixed;background:var(--b1);border:1px solid var(--ng);color:var(--ng);font-family:var(--f1);font-size:9px;padding:7px 11px;z-index:1000;box-shadow:var(--gng);display:none;pointer-events:none;line-height:1.7;border-radius:3px;max-width:220px}
 footer{border-top:1px solid #00ff4110;padding:22px;text-align:center;font-size:9px;color:var(--tx3);letter-spacing:3px}
 footer span{color:var(--ng)}
+
+/* ═══ MOBILE RESPONSIVE ═══ */
+@media(hover:none),(pointer:coarse){body{cursor:auto;}}
+
+@media(max-width:768px){
+  #hdr{padding:36px 18px 24px;}
+  .htitle{font-size:clamp(36px,11vw,72px);}
+  .hpills{gap:12px;}
+  nav a{padding:9px 12px;font-size:11px;letter-spacing:1.5px;}
+  .sec{padding:32px 16px;}
+  /* Mini floating canvas — keep but ensure it doesn't block content */
+  #cvWrap.isMini{width:200px!important;height:133px!important;right:12px!important;bottom:12px!important;}
+}
+
+@media(max-width:520px){
+  #hdr{padding:28px 14px 18px;}
+  .htitle{font-size:clamp(32px,13vw,64px);letter-spacing:1px;}
+  .hsub{font-size:9px;letter-spacing:2px;}
+  .hpills{gap:10px;margin-top:14px;}
+  .pill{font-size:8px;}
+  nav{overflow-x:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch;}
+  nav a{padding:9px 10px;font-size:10px;letter-spacing:1px;white-space:nowrap;flex-shrink:0;}
+  .sec{padding:24px 12px;}
+  .sim-grid{gap:10px;}
+  #vpPlaceholder{min-height:340px;}
+  .ctrl-col .card{padding:12px;}
+  .apps-grid{gap:10px;}
+  .acard{padding:14px 12px;}
+  .tab-row{gap:1px;}
+  .tb{padding:7px 10px;font-size:10px;letter-spacing:1px;}
+  pre{font-size:10px;}
+  /* Mini canvas smaller on very small screens */
+  #cvWrap.isMini{width:160px!important;height:107px!important;right:8px!important;bottom:8px!important;}
+}
 </style>
 </head>
 <body>

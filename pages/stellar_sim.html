@@ -73,6 +73,17 @@
       #info-panel { width: auto; padding: 16px; margin-top: 15px; }
       .lil-gui.root { top: auto !important; bottom: 15px !important; right: 15px !important; left: auto !important; }
     }
+    @media(max-width: 520px) {
+      #back-btn { padding: 9px 16px; font-size: 10px; }
+      #ui-layer { top: 10px; left: 10px; right: 10px; }
+      #info-panel { padding: 14px; margin-top: 10px; }
+      h1 { font-size: 20px; }
+      .tagline { font-size: 12px; margin-bottom: 16px; }
+      .stat-row { font-size: 10px; }
+      /* Move pulsar graph up so it doesn't overlap GUI */
+      #pulsar-graph-container { left: 10px !important; bottom: 10px !important; width: calc(100vw - 20px) !important; }
+      .lil-gui.root { bottom: 130px !important; right: 10px !important; }
+    }
     .lil-gui.root > .children > .title { color: #39FF14; font-weight: 600; letter-spacing: 0.1em; }
     .loader {
       position: fixed; inset: 0; background: #05050a; z-index: 100;

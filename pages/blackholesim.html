@@ -12,10 +12,64 @@
   :root {
     --gold: #e8a020;
     --bg: #000005;
+    --green: #00ff88;
     --panel-bg: rgba(8,8,20,0.88);
     --border: rgba(232,160,32,0.25);
     --text: #ccc;
   }
+
+  /* ── Custom Cursor Styles ── */
+* {
+  cursor: none !important; /* Force hide default cursor everywhere */
+}
+
+#custom-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none; /* Let clicks pass through to the canvas/UI */
+  z-index: 9999;
+}
+
+.cursor-dot {
+  position: fixed;
+  top: 0; left: 0;
+  width: 4px;
+  height: 4px;
+  background: var(--gold);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--gold);
+  will-change: transform;
+}
+
+.cursor-ring {
+  position: fixed;
+  top: 0; left: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(232, 160, 32, 0.4);
+  border-radius: 50%;
+  box-shadow: 0 0 15px rgba(232, 160, 32, 0.1) inset;
+  will-change: transform, width, height;
+  transition: width 0.3s ease, height 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+}
+
+/* Dragging State */
+body.dragging .cursor-ring {
+  width: 50px;
+  height: 50px;
+  border-color: var(--gold);
+  background-color: rgba(232, 160, 32, 0.08);
+  border-width: 2px;
+}
+
+/* Hovering UI Elements State */
+body.hovering .cursor-ring {
+  width: 16px;
+  height: 16px;
+  background-color: rgba(232, 160, 32, 0.2);
+  border-color: var(--gold);
+}
 
   html, body {
     width: 100%; height: 100%;
@@ -39,7 +93,11 @@
 
   #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
 
-  #title-block { position: absolute; top: 28px; left: 36px; }
+  #title-block { 
+  position: absolute; 
+  top: 60px; /* Changed from 28px to 60px */
+  left: 36px; 
+}
   #title-block h1 {
     font-family: 'Orbitron', sans-serif; font-weight: 700;
     font-size: 1.05rem; letter-spacing: 0.25em;
@@ -49,6 +107,29 @@
     font-size: 0.62rem; color: rgba(232,160,32,0.45);
     letter-spacing: 0.18em; margin-top: 3px;
   }
+
+  .logo {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+  font-family: 'Orbitron', sans-serif; /* Matches your title font */
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold); /* Use your existing gold variable */
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.logo span {
+  color: #fff; /* Part of the logo can be white for contrast */
+}
+
+.logo:hover {
+  color: #fff;
+  transform: scale(1.1); /* Use transform instead of 'size' */
+}
 
   /* Action Buttons Container */
   #top-actions {
@@ -163,14 +244,49 @@
   @media (max-width: 800px) {
     #video-modal { width: 90vw; padding: 15px; }
   }
+
+  /* ── MOBILE RESPONSIVE ── */
+  @media (max-width: 600px) {
+    #title-block { top: 14px; left: 14px; }
+    #title-block h1 { font-size: 0.85rem; letter-spacing: 0.15em; }
+    #title-block p { font-size: 0.55rem; }
+
+    /* Move controls to bottom-left, narrower */
+    #top-actions { top: 12px; right: 12px; gap: 6px; }
+    .action-btn { padding: 8px 10px; font-size: 0.58rem; letter-spacing: 0.1em; }
+
+    #controls {
+      top: auto !important;
+      bottom: 60px; right: 10px;
+      width: min(200px, calc(100vw - 20px));
+      padding: 10px 12px;
+    }
+
+    #infobar { gap: 12px; font-size: 0.52rem; flex-wrap: wrap; justify-content: center; }
+    #fps { font-size: 0.52rem; bottom: 14px; right: 14px; }
+  }
+
+  @media (max-width: 400px) {
+    #title-block h1 { font-size: 0.75rem; }
+    .action-btn { padding: 7px 8px; font-size: 0.52rem; }
+    #controls { width: calc(100vw - 20px); right: 10px; }
+  }
 </style>
 </head>
 <body>
 
+  <div id="custom-cursor">
+  <div class="cursor-ring"></div>
+  <div class="cursor-dot"></div>
+</div>
+
 <div id="canvas-container"><canvas id="c"></canvas></div>
+
+<div class="logo" onclick="window.location.href='../index.html'">A/</div>
 
 <div id="hud">
   <div id="title-block">
+    
     <h1>Schwarzschild Black Hole</h1>
     <p>Gravitational Lensing · Accretion Disk · Real-Time</p>
   </div>
@@ -736,6 +852,49 @@ function norm3(v) {
   const l = Math.hypot(...v);
   return v.map(x => x / l);
 }
+
+// ── Optimized Custom Cursor Logic ─────────────────────────────────────────────
+const cursorDot = document.querySelector('.cursor-dot');
+const cursorRing = document.querySelector('.cursor-ring');
+
+let mouseX = window.innerWidth / 2;
+let mouseY = window.innerHeight / 2;
+let ringX = mouseX;
+let ringY = mouseY;
+
+// 1. Only capture the math here, don't touch the DOM (High Performance)
+window.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+}, { passive: true }); // 'passive' tells the browser we won't interrupt scrolling
+
+// 2. Do all the visual updates strictly on the screen's refresh cycle
+function animateCursor() {
+  // Move the core dot instantly
+  cursorDot.style.transform = `translate3d(calc(${mouseX}px - 50%), calc(${mouseY}px - 50%), 0)`;
+
+  // Move the ring (Increased speed from 0.18 to 0.4 for a snappier feel)
+  ringX += (mouseX - ringX) * 0.4; 
+  ringY += (mouseY - ringY) * 0.4;
+  
+  cursorRing.style.transform = `translate3d(calc(${ringX}px - 50%), calc(${ringY}px - 50%), 0)`;
+  
+  requestAnimationFrame(animateCursor);
+}
+requestAnimationFrame(animateCursor);
+
+// ── Cursor Interaction States ──
+
+window.addEventListener('mousedown', () => document.body.classList.add('dragging'));
+window.addEventListener('mouseup', () => document.body.classList.remove('dragging'));
+
+const interactables = document.querySelectorAll('.action-btn, input[type=range], .toggle, .logo, .close-btn');
+
+interactables.forEach(el => {
+  el.addEventListener('mouseenter', () => document.body.classList.add('hovering'));
+  el.addEventListener('mouseleave', () => document.body.classList.remove('hovering'));
+});
+
 </script>
 </body>
 </html>
