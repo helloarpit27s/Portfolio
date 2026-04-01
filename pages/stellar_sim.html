@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stellar Object Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #05050a;
+      color: #dddde8;
+      font-family: 'Outfit', sans-serif;
+    }
+    #canvas-container {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+    }
+    #ui-layer {
+      position: absolute; top: 30px; left: 30px; z-index: 10; pointer-events: none;
+    }
+    #back-btn {
+      pointer-events: auto; padding: 12px 24px; background: rgba(5,5,10,0.6);
+      border: 1px solid rgba(57,255,20,0.3); color: #39FF14;
+      cursor: pointer; text-transform: uppercase; font-size: 11px;
+      letter-spacing: 0.15em; font-family: 'JetBrains Mono', monospace;
+      transition: all 0.3s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
+    #back-btn:hover {
+      background: rgba(57,255,20,0.1); box-shadow: 0 0 20px rgba(57,255,20,0.2);
+      transform: translateX(-4px);
+    }
+    #info-panel {
+      pointer-events: auto; margin-top: 24px; width: 340px;
+      background: rgba(5,5,10,0.7); border: 1px solid rgba(57,255,20,0.15);
+      padding: 24px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    h1 {
+      font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800;
+      margin: 0 0 12px 0; color: #fff; line-height: 1.1; letter-spacing: -0.02em;
+    }
+    h1 em { color: #39FF14; font-style: normal; text-shadow: 0 0 20px rgba(57,255,20,0.4); }
+    .tagline {
+      font-size: 13px; line-height: 1.6; color: #9090a2; margin-bottom: 24px;
+    }
+    .stat-row {
+      display: flex; justify-content: space-between; margin-bottom: 12px;
+      font-size: 11px; font-family: 'JetBrains Mono', monospace;
+      border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;
+    }
+    .stat-label { color: #4e4e62; text-transform: uppercase; letter-spacing: 0.1em; }
+    .stat-val { color: #39FF14; font-weight: 500; }
+    .lil-gui { 
+      --background-color: rgba(10,10,18,0.85);
+      --text-color: #dddde8;
+      --title-background-color: rgba(5,5,10,0.9);
+      --widget-color: rgba(255,255,255,0.05);
+      --hover-color: rgba(57,255,20,0.1);
+      --focus-color: #39FF14;
+      --number-color: #39FF14;
+      --string-color: #fff;
+      --font-family: 'JetBrains Mono', monospace;
+    }
+    .lil-gui.root {
+      position: absolute; top: 30px; right: 30px; z-index: 10;
+      border: 1px solid rgba(57,255,20,0.15); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    }
+    @media(max-width: 768px) {
+      #ui-layer { top: 15px; left: 15px; right: 15px; }
+      #info-panel { width: auto; padding: 16px; margin-top: 15px; }
+      .lil-gui.root { top: auto !important; bottom: 15px !important; right: 15px !important; left: auto !important; }
+    }
+    .lil-gui.root > .children > .title { color: #39FF14; font-weight: 600; letter-spacing: 0.1em; }
+    .loader {
+      position: fixed; inset: 0; background: #05050a; z-index: 100;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.8s; font-family: 'JetBrains Mono', monospace;
+    }
+    .ld-txt { color: #39FF14; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 20px; animation: pulse 1s infinite alternate; }
+    .bar { width: 200px; height: 1px; background: #222; position: relative; }
+    .bar-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: #39FF14; box-shadow: 0 0 10px #39FF14; transition: width 0.3s; }
+    @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <div class="loader" id="loader">
+    <div class="ld-txt">Initializing Quantum State...</div>
+    <div class="bar"><div class="bar-fill" id="ld-bar"></div></div>
+  </div>
+
+  <div id="ui-layer">
+    <button id="back-btn" onclick="window.location.href='../index.html'">← Return Home</button>
+    <div id="info-panel">
+      <h1>Relativistic <em>Observatory</em></h1>
+      <p class="tagline" id="obj-desc">Real-time simulation of high-energy stellar phenomena factoring in relativistic distortion and time dilation.</p>
+      <div id="stats">
+        <div class="stat-row"><span class="stat-label">Mass (M☉)</span><span class="stat-val" id="s-mass">10.0</span></div>
+        <div class="stat-row"><span class="stat-label">Observer Vel (v/c)</span><span class="stat-val" id="s-vel">0.000</span></div>
+        <div class="stat-row"><span class="stat-label">Time Dilation (γ)</span><span class="stat-val" id="s-gamma">1.000</span></div>
+        <div class="stat-row"><span class="stat-label">Doppler Shift (z)</span><span class="stat-val" id="s-z">0.000</span></div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="pulsar-graph-container" style="display:none; position:absolute; bottom:30px; left:30px; width:340px; height:100px; background:rgba(5,5,10,0.7); border:1px solid rgba(57,255,20,0.3); backdrop-filter:blur(10px); z-index:10; pointer-events:none;">
+    <div style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#39FF14; padding:5px 10px; border-bottom:1px solid rgba(57,255,20,0.2);">RADIO EMISSION SIGNAL (MHz)</div>
+    <canvas id="pulsar-canvas" width="340" height="75"></canvas>
+  </div>
+  
+  <div id="canvas-container"></div>
+
+  <!-- IMPORT MAP -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "lil-gui": "https://unpkg.com/lil-gui@0.19.1/dist/lil-gui.esm.min.js"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    import GUI from 'lil-gui';
+
+    // --- SETUP ---
+    const container = document.getElementById('canvas-container');
+    const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // limit to 2 for perf
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+    camera.position.set(0, 15, 35);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxDistance = 100;
+    controls.minDistance = 5;
+
+    // --- POSTPROCESSING (BLOOM) ---
+    const composer = new EffectComposer(renderer);
+    const renderPass = new RenderPass(scene, camera);
+    composer.addPass(renderPass);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+    bloomPass.threshold = 0.2;
+    bloomPass.strength = 1.2;
+    bloomPass.radius = 0.5;
+    composer.addPass(bloomPass);
+
+    // --- ENVIRONMENT ---
+    // Create a beautiful starry background sphere
+    const bgGeo = new THREE.SphereGeometry(800, 32, 32);
+    const bgMat = new THREE.MeshBasicMaterial({ color: 0x030308, side: THREE.BackSide });
+    scene.add(new THREE.Mesh(bgGeo, bgMat));
+
+    const starGeo = new THREE.BufferGeometry();
+    const starVerts = [];
+    for(let i=0; i<6000; i++){
+      const r = 500 + Math.random() * 200;
+      const t = Math.random() * Math.PI * 2;
+      const p = Math.acos((Math.random() * 2) - 1);
+      starVerts.push(r * Math.sin(p) * Math.cos(t), r * Math.sin(p) * Math.sin(t), r * Math.cos(p));
+    }
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVerts, 3));
+    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, transparent: true, opacity: 0.8, sizeAttenuation: true });
+    scene.add(new THREE.Points(starGeo, starMat));
+
+    const params = {
+      objectType: 'Black Hole',
+      mass: 10.0,
+      observerVelocity: 0.0, // fraction of c (-0.9 to 0.9)
+      rotationSpeed: 1.0,
+      accretionHeat: 1.0,
+      toggleRelativity: true
+    };
+
+    let clock = new THREE.Clock();
+    let globalTime = 0;
+    let currentMeshes = [];
+
+    const pulsarCanvas = document.getElementById('pulsar-canvas');
+    const pctx = pulsarCanvas.getContext('2d');
+    let pulsarData = new Array(340).fill(0);
+
+    // --- SHADERS & MATERIALS ---
+    const noiseChunk = `
+      vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+      vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+      float snoise(vec3 v) {
+        const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+        const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+        vec3 i  = floor(v + dot(v, C.yyy));
+        vec3 x0 = v - i + dot(i, C.xxx);
+        vec3 g = step(x0.yzx, x0.xyz);
+        vec3 l = 1.0 - g;
+        vec3 i1 = min(g.xyz, l.zxy);
+        vec3 i2 = max(g.xyz, l.zxy);
+        vec3 x1 = x0 - i1 + C.xxx;
+        vec3 x2 = x0 - i2 + C.yyy;
+        vec3 x3 = x0 - 0.5;
+        i = mod289(i);
+        vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+        float n_ = 1.0/7.0;
+        vec3 ns = n_ * D.wyz - D.xzx;
+        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+        vec4 x_ = floor(j * ns.z);
+        vec4 y_ = floor(j - 7.0 * x_);
+        vec4 x = x_ *ns.x + ns.yyyy;
+        vec4 y = y_ *ns.x + ns.yyyy;
+        vec4 h = 1.0 - abs(x) - abs(y);
+        vec4 b0 = vec4(x.xy, y.xy);
+        vec4 b1 = vec4(x.zw, y.zw);
+        vec4 s0 = floor(b0)*2.0 + 1.0;
+        vec4 s1 = floor(b1)*2.0 + 1.0;
+        vec4 sh = -step(h, vec4(0.0));
+        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+        vec3 p0 = vec3(a0.xy,h.x);
+        vec3 p1 = vec3(a0.zw,h.y);
+        vec3 p2 = vec3(a1.xy,h.z);
+        vec3 p3 = vec3(a1.zw,h.w);
+        vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+        p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+        m = m * m;
+        return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+      }
+    `;
+
+    const dopplerChunk = `
+      vec3 applyDoppler(vec3 color, float v, bool active) {
+        if(!active) return color;
+        // Relativistic Doppler Shift approximation
+        // v > 0 = approaching (blueshift), v < 0 = receding (redshift)
+        float beta = v;
+        float gamma = 1.0 / sqrt(1.0 - beta*beta + 0.001);
+        float shift = sqrt((1.0 + beta) / (1.0 - beta + 0.001)); // z+1 factor
+        
+        vec3 shiftedColor = color;
+        // Blue shift
+        if(beta > 0.0) {
+            shiftedColor.r *= max(0.0, 1.0 - beta*1.5);
+            shiftedColor.b += color.r * beta;
+            shiftedColor *= shift; // brighter when approaching (Relativistic beaming)
+        } 
+        // Red shift
+        else {
+            shiftedColor.b *= max(0.0, 1.0 + beta*1.5);
+            shiftedColor.r -= color.b * beta;
+            shiftedColor /= shift; // dimmer when receding
+        }
+        return shiftedColor;
+      }
+    `;
+
+    // 1. Black Hole Shader (Volumetric Lensing Raymarcher)
+    const cinematicBlackHoleMat = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+        camPos: { value: new THREE.Vector3() },
+        camDir: { value: new THREE.Vector3() },
+        camUp: { value: new THREE.Vector3() },
+        camRight: { value: new THREE.Vector3() },
+        heat: { value: 1.0 },
+        useRelativity: { value: 1.0 },
+        v: { value: 0.0 }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          // Z = 0.5 ensures it passes depth test against the far background stars
+          gl_Position = vec4((uv - 0.5) * 2.0, 0.5, 1.0); 
+        }
+      `,
+      fragmentShader: `
+        uniform float time;
+        uniform vec2 resolution;
+        uniform vec3 camPos;
+        uniform vec3 camDir;
+        uniform vec3 camUp;
+        uniform vec3 camRight;
+        uniform float heat;
+        uniform float useRelativity;
+        uniform float v;
+        
+        varying vec2 vUv;
+        
+        #define MAX_STEPS 60
+        #define DT 0.18
+
+        float hash(float n) { return fract(sin(n) * 43758.5453); }
+        float noise(vec3 x) {
+            vec3 p = floor(x);
+            vec3 f = fract(x);
+            f = f * f * (3.0 - 2.0 * f);
+            float n = p.x + p.y * 57.0 + 113.0 * p.z;
+            return mix(
+                mix(mix(hash(n + 0.0), hash(n + 1.0), f.x),
+                    mix(hash(n + 57.0), hash(n + 58.0), f.x), f.y),
+                mix(mix(hash(n + 113.0), hash(n + 114.0), f.x),
+                    mix(hash(n + 170.0), hash(n + 171.0), f.x), f.y), f.z);
+        }
+        float fbm(vec3 p) {
+            float f = 0.0;
+            f += 0.5000 * noise(p); p = p * 2.02;
+            f += 0.2500 * noise(p); p = p * 2.03;
+            f += 0.1250 * noise(p); p = p * 2.01;
+            f += 0.0625 * noise(p);
+            return f;
+        }
+
+        void main() {
+            vec2 uv = (vUv - 0.5) * 2.0;
+            uv.x *= resolution.x / resolution.y;
+
+            vec3 rd = normalize(camDir * 1.5 + uv.x * camRight + uv.y * camUp);
+            vec3 p = camPos;
+            
+            vec3 col = vec3(0.0);
+            float mass = 1.2; 
+            
+            bool hitEventHorizon = false;
+
+            for(int i = 0; i < MAX_STEPS; i++) {
+                p += rd * DT;
+                
+                // GRAVITATIONAL LENSING
+                float r2 = dot(p, p);
+                vec3 force = -p * (mass / (r2 * sqrt(r2))); 
+                rd = normalize(rd + force * DT * 2.0);
+                
+                if (r2 < 1.0) {
+                    hitEventHorizon = true;
+                    break; 
+                }
+                
+                // ACCRETION DISK
+                float distToPlane = abs(p.y);
+                float radius = length(p.xz);
+                
+                if(distToPlane < 0.4 && radius > 2.2 && radius < 7.0) {
+                    float angle = atan(p.z, p.x);
+                    float spin = angle - time * (2.8 / radius);
+                    
+                    vec3 noisePos = vec3(cos(spin)*radius*2.0, p.y*15.0, sin(spin)*radius*2.0);
+                    float density = fbm(noisePos - vec3(0.0, time*1.5, 0.0));
+                    
+                    density *= smoothstep(0.4, 0.0, distToPlane); 
+                    density *= smoothstep(2.2, 3.5, radius) * smoothstep(7.0, 5.0, radius); 
+                    
+                    vec3 flowDir = normalize(vec3(-p.z, 0.0, p.x));
+                    float doppler = dot(rd, flowDir) * 1.5 * useRelativity;
+                    
+                    vec3 glowColor = mix(vec3(1.0, 0.3, 0.0), vec3(1.0, 0.9, 0.5), density * heat);
+                    
+                    if (doppler > 0.0) {
+                        glowColor.b += doppler * 0.8;
+                        glowColor.g += doppler * 0.4;
+                        glowColor *= (1.0 + doppler * 2.0);
+                    } else {
+                        glowColor.r += abs(doppler) * 0.5;
+                        glowColor *= clamp(1.0 - abs(doppler) * 0.5, 0.2, 1.0);
+                    }
+                    glowColor *= density * 1.8;
+                    col += glowColor * DT;
+                }
+            }
+            
+            float alpha = 0.0;
+            if (hitEventHorizon) {
+                // The event horizon perfectly eclipses the background
+                col = vec3(0.0);
+                alpha = 1.0;
+            } else if (length(col) > 0.01) {
+                // Volumetric disk glow
+                alpha = min(1.0, length(col));
+                // Optional external doppler from 'v' parameter
+                if (useRelativity > 0.5) {
+                   float shift = sqrt((1.0 + v) / (1.0 - v + 0.001));
+                   if(v > 0.0) { col.b += col.r * v; col *= shift; }
+                   else { col.r -= col.b * v; col /= shift; }
+                }
+            }
+
+            gl_FragColor = vec4(col, alpha);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+    });
+
+    // 2. Main Sequence Star Shader
+    const starMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        velocity: { value: 0.0 },
+        useRelativity: { value: 1.0 }
+      },
+      vertexShader: `
+        ${noiseChunk}
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        uniform float time;
+        void main() {
+          vUv = uv;
+          vNormal = normal;
+          // small displacement
+          float d = snoise(position * 2.0 + time * 0.5) * 0.2;
+          vec3 pos = position + normal * d;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `,
+      fragmentShader: `
+        ${noiseChunk}
+        ${dopplerChunk}
+        uniform float time;
+        uniform float velocity;
+        uniform float useRelativity;
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        void main() {
+          float n1 = snoise(vec3(vUv.x * 10.0, vUv.y * 10.0, time));
+          float n2 = snoise(vec3(vUv.x * 30.0, vUv.y * 30.0, time * 2.0));
+          
+          float brightness = n1 * 0.5 + 0.5;
+          brightness = pow(brightness, 2.0) + (n2 * 0.1);
+          
+          vec3 color = mix(vec3(0.8, 0.2, 0.0), vec3(1.0, 0.9, 0.2), brightness);
+          
+          // Outer glow / fresnel
+          vec3 viewDir = normalize(cameraPosition - vNormal);
+          float fresnel = dot(viewDir, vNormal);
+          fresnel = clamp(1.0 - fresnel, 0.0, 1.0);
+          color += vec3(1.0, 0.5, 0.0) * pow(fresnel, 3.0);
+          
+          color = applyDoppler(color, velocity, useRelativity > 0.5);
+          
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `
+    });
+
+    // 3. Pulsar Shader
+    const pulsarMaterial = new THREE.ShaderMaterial({
+      uniforms: { time: { value: 0 }, velocity: { value: 0 }, useRelativity: { value: 1.0 } },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() { vUv=uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }
+      `,
+      fragmentShader: `
+        ${dopplerChunk}
+        uniform float time; uniform float velocity; uniform float useRelativity;
+        varying vec2 vUv;
+        void main() {
+          vec3 color = vec3(0.1, 0.5, 1.0); // very hot blue
+          float pulse = sin(time*20.0)*0.5+0.5;
+          color += vec3(0.5, 0.8, 1.0) * pulse;
+          color = applyDoppler(color, velocity, useRelativity > 0.5);
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `
+    });
+
+    const jetMaterial = new THREE.ShaderMaterial({
+      uniforms: { time: { value: 0 } },
+      vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader: `
+        ${noiseChunk}
+        uniform float time;
+        varying vec2 vUv;
+        void main() {
+           float n = snoise(vec3(vUv.x*10.0, vUv.y*5.0 - time*10.0, 0.0));
+           float invY = 1.0 - vUv.y;
+           float alpha = (n*0.5+0.5) * invY;
+           alpha *= smoothstep(0.0, 0.2, vUv.x) * smoothstep(1.0, 0.8, vUv.x);
+           gl_FragColor = vec4(0.2, 0.8, 1.0, alpha*0.8);
+        }
+      `,
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+    });
+
+
+    // --- BUILD SCENES ---
+    function clearScene() {
+      currentMeshes.forEach(m => scene.remove(m));
+      currentMeshes = [];
+    }
+
+    function buildBlackHole() {
+      // Create a fullscreen quad in the main scene
+      // We set renderOrder high so it renders over the background correctly
+      const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), cinematicBlackHoleMat);
+      quad.frustumCulled = false;
+      quad.renderOrder = 999;
+      scene.add(quad);
+      currentMeshes.push(quad);
+    }
+
+    function buildMainSequence() {
+      const star = new THREE.Mesh(new THREE.SphereGeometry(6, 128, 128), starMaterial);
+      scene.add(star); currentMeshes.push(star);
+    }
+
+    function buildPulsar() {
+      const core = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 64), pulsarMaterial);
+      scene.add(core); currentMeshes.push(core);
+      
+      const jet1 = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 4, 30, 32, 1, true), jetMaterial);
+      jet1.position.y = 15;
+      scene.add(jet1); currentMeshes.push(jet1);
+      
+      const jet2 = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 4, 30, 32, 1, true), jetMaterial);
+      jet2.position.y = -15;
+      jet2.rotation.x = Math.PI;
+      scene.add(jet2); currentMeshes.push(jet2);
+
+      const g = new THREE.Group();
+      g.add(core, jet1, jet2);
+      g.rotation.z = 0.4;
+      scene.add(g); currentMeshes.push(g);
+    }
+
+    function buildBinary() {
+      const star1 = new THREE.Mesh(new THREE.SphereGeometry(4, 64, 64), starMaterial);
+      star1.position.x = -8;
+      const star2 = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), pulsarMaterial);
+      star2.position.x = 8;
+      
+      const g = new THREE.Group();
+      g.add(star1, star2);
+      scene.add(g); currentMeshes.push(g);
+    }
+
+    function updateScene() {
+      clearScene();
+      bloomPass.strength = 1.2;
+      
+      if(params.objectType === 'Black Hole') {
+        buildBlackHole();
+        document.getElementById('obj-desc').textContent = "Singularity surrounded by an actively feeding, ultra-hot accretion disk. Notice the relativistic beaming causing the approaching side of the disk to appear brighter and blue-shifted.";
+      } 
+      else if (params.objectType === 'Main Sequence') {
+        buildMainSequence();
+        document.getElementById('obj-desc').textContent = "Standard stable fusion star. Surface shows convective plasma cells. Modifying observer velocity will globally shift the color spectrum.";
+      }
+      else if (params.objectType === 'Pulsar') {
+        buildPulsar();
+        bloomPass.strength = 2.5;
+        document.getElementById('obj-desc').textContent = "Rapidly rotating neutron star emitting relativistic jets of radiation from its magnetic poles.";
+      }
+      else if (params.objectType === 'Binary System') {
+        buildBinary();
+        document.getElementById('obj-desc').textContent = "Two stars orbiting a common barycenter. Relativistic effects apply independently to their relative orbital vectors.";
+      }
+    }
+
+    // --- GUI ---
+    const gui = new GUI({ title: 'System Parameters' });
+    gui.add(params, 'objectType', ['Black Hole', 'Main Sequence', 'Pulsar', 'Binary System']).name('Celestial Body').onChange(updateScene);
+    
+    const physFolder = gui.addFolder('Relativistic Physics');
+    physFolder.add(params, 'toggleRelativity').name('Enable Relativity');
+    physFolder.add(params, 'observerVelocity', -0.9, 0.9).name('Obs. Velocity (v/c)').step(0.01);
+    physFolder.add(params, 'mass', 1, 100).name('Mass (M☉)');
+    physFolder.add(params, 'rotationSpeed', 0, 5).name('Rotation / Orbit Spd');
+    
+    const visualFolder = gui.addFolder('Visuals');
+    visualFolder.add(params, 'accretionHeat', 0.5, 3.0).name('Disk Heat Limit');
+    visualFolder.add(bloomPass, 'strength', 0, 3).name('PostFX Glow');
+
+    // --- ANIMATION LOOP ---
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      const dt = clock.getDelta();
+      
+      const v = params.observerVelocity;
+      let gamma = params.toggleRelativity ? (1.0 / Math.sqrt(Math.max(0.0001, 1.0 - v*v))) : 1.0;
+      let zShift = params.toggleRelativity ? Math.sqrt((1+v)/Math.max(0.0001, 1-v)) - 1.0 : 0.0;
+      
+      globalTime += dt * params.rotationSpeed * (1.0 / gamma);
+
+      document.getElementById('s-mass').innerText = params.mass.toFixed(2);
+      document.getElementById('s-vel').innerText = v.toFixed(3) + 'c';
+      document.getElementById('s-gamma').innerText = gamma.toFixed(3);
+      document.getElementById('s-z').innerText = zShift.toFixed(3);
+
+      // Update Raymarched BlackHole
+      if (params.objectType === 'Black Hole') {
+        cinematicBlackHoleMat.uniforms.time.value = globalTime;
+        cinematicBlackHoleMat.uniforms.heat.value = params.accretionHeat;
+        cinematicBlackHoleMat.uniforms.useRelativity.value = params.toggleRelativity ? 1.0 : 0.0;
+        cinematicBlackHoleMat.uniforms.v.value = v;
+
+        // Pass camera properties
+        cinematicBlackHoleMat.uniforms.camPos.value.copy(camera.position);
+        
+        let target = new THREE.Vector3();
+        camera.getWorldDirection(target);
+        cinematicBlackHoleMat.uniforms.camDir.value.copy(target);
+        
+        cinematicBlackHoleMat.uniforms.camUp.value.copy(camera.up);
+        
+        let right = new THREE.Vector3().crossVectors(target, camera.up).normalize();
+        // Three.js up vs standard right might be inverse depending on handedness, let's fix if necessary
+        cinematicBlackHoleMat.uniforms.camRight.value.copy(right);
+        
+        cinematicBlackHoleMat.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
+      }
+
+      // Update Standard Shaders
+      starMaterial.uniforms.time.value = globalTime;
+      starMaterial.uniforms.velocity.value = v;
+      starMaterial.uniforms.useRelativity.value = params.toggleRelativity ? 1.0 : 0.0;
+
+      pulsarMaterial.uniforms.time.value = globalTime;
+      pulsarMaterial.uniforms.velocity.value = v;
+      pulsarMaterial.uniforms.useRelativity.value = params.toggleRelativity ? 1.0 : 0.0;
+      
+      jetMaterial.uniforms.time.value = globalTime * 5.0;
+
+      if (params.objectType === 'Pulsar') {
+        if (currentMeshes.length > 0) {
+          currentMeshes[0].rotation.y = globalTime * 20.0; 
+        }
+        
+        document.getElementById('pulsar-graph-container').style.display = 'block';
+        
+        // Emulate signal spikes aligned with visual jet rotation
+        let beamAlign = Math.pow(Math.sin((globalTime * 20.0) + Math.PI/2), 64.0);
+        let noise = Math.random() * 0.15;
+        let signal = beamAlign * 0.8 + noise;
+        
+        pulsarData.push(signal);
+        pulsarData.shift();
+        
+        pctx.clearRect(0,0,340,100);
+        pctx.beginPath();
+        pctx.strokeStyle = '#39FF14';
+        pctx.lineWidth = 1.5;
+        for(let i=0; i<340; i++) {
+           let y = 75 - (pulsarData[i] * 65) - 5;
+           if(i===0) pctx.moveTo(i, y);
+           else pctx.lineTo(i, y);
+        }
+        pctx.stroke();
+      } else {
+        document.getElementById('pulsar-graph-container').style.display = 'none';
+      }
+
+      if (params.objectType === 'Binary System' && currentMeshes.length > 0) {
+        currentMeshes[0].rotation.y = globalTime; 
+      }
+
+      controls.update();
+      composer.render();
+    }
+
+    // --- INIT ---
+    setTimeout(() => {
+      document.getElementById('ld-bar').style.width = '100%';
+      setTimeout(() => {
+        document.getElementById('loader').style.opacity = '0';
+        setTimeout(() => {
+          document.getElementById('loader').style.display = 'none';
+        }, 800);
+      }, 400);
+      updateScene();
+      animate();
+    }, 1000);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      composer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+  </script>
+</body>
+</html>

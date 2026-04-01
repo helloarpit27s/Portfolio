@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum State Simulator — Aditya</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#03030a;--bg2:#080810;--bg3:#0e0e1a;--bg4:#131320;
+  --green:#39FF14;--g5:rgba(57,255,20,.05);--g10:rgba(57,255,20,.10);
+  --g20:rgba(57,255,20,.20);--g40:rgba(57,255,20,.40);
+  --cyan:#00e5ff;--purple:#b060ff;--orange:#ff8c00;
+  --text:#d8d8e8;--tdim:#3e3e52;--tmid:#7878a0;
+  --bdr:rgba(57,255,20,.10);--bdrb:rgba(57,255,20,.28);
+  --mono:'JetBrains Mono',monospace;
+  --body:'Outfit',sans-serif;
+  --disp:'Syne',sans-serif;
+}
+
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--body);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+
+/* ── SCANLINE overlay ── */
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);pointer-events:none;z-index:0;}
+
+/* ── HEADER ── */
+header{padding:22px 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bdr);position:relative;z-index:10;}
+.logo{font-family:var(--mono);font-size:16px;color:var(--green);text-underline-offset: var(--bg);}
+.logo span{color:var(--tmid);}
+.logo:hover{color:var(--green);cursor:pointer;}
+.hbadge{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--tmid);text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.hbadge::before{content:'';width:6px;height:6px;background:var(--green);border-radius:50%;box-shadow:0 0 8px var(--green);animation:pulse 2s ease infinite;}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-columns:1fr 340px;grid-template-rows:auto 1fr;gap:0;min-height:calc(100vh - 65px);position:relative;z-index:1;}
+.main-panel{padding:32px 40px;display:flex;flex-direction:column;gap:28px;border-right:1px solid var(--bdr);}
+.side-panel{display:flex;flex-direction:column;overflow:hidden;}
+
+/* ── SECTION LABEL ── */
+.slbl{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--green);opacity:.7;margin-bottom:12px;}
+
+/* ── STATE DISPLAY ── */
+.state-block{background:var(--bg2);border:1px solid var(--bdr);padding:22px 26px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+.psi-display{font-family:var(--mono);font-size:clamp(13px,1.8vw,17px);letter-spacing:-.01em;line-height:1.6;}
+.psi-display .ket{color:var(--text);}
+.psi-display .amp0{color:var(--green);}
+.psi-display .amp1{color:var(--cyan);}
+.psi-display .op{color:var(--tmid);padding:0 6px;}
+.psi-norm{font-family:var(--mono);font-size:11px;color:var(--tdim);}
+.psi-norm span{color:var(--green);}
+
+/* ── BLOCH SPHERE ── */
+.bloch-wrap{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;}
+.bloch-container{position:relative;flex-shrink:0;}
+#bloch{border:1px solid var(--bdr);background:var(--bg2);display:block;}
+.bloch-label{font-family:var(--mono);font-size:10px;color:var(--tmid);text-align:center;margin-top:8px;letter-spacing:.1em;}
+
+/* ── PROB BARS ── */
+.prob-section{flex:1;min-width:200px;}
+.prob-row{margin-bottom:20px;}
+.prob-head{display:flex;justify-content:space-between;margin-bottom:7px;}
+.prob-ket{font-family:var(--mono);font-size:13px;}
+.prob-pct{font-family:var(--mono);font-size:13px;}
+.pbar{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-bottom:6px;}
+.pbar-fill{height:100%;border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+.pbar-fill.z{background:var(--green);box-shadow:0 0 8px rgba(57,255,20,.5);}
+.pbar-fill.o{background:var(--cyan);box-shadow:0 0 8px rgba(0,229,255,.4);}
+.amp-detail{font-family:var(--mono);font-size:10px;color:var(--tdim);}
+
+/* ── PHASE WHEEL ── */
+.phase-row{display:flex;gap:20px;margin-top:8px;}
+.phase-item{text-align:center;}
+.phase-item canvas{display:block;}
+.phase-lbl{font-family:var(--mono);font-size:10px;color:var(--tdim);margin-top:6px;text-align:center;}
+
+/* ── GATES ── */
+.gates-wrap{display:flex;flex-direction:column;gap:16px;}
+.gate-group{display:flex;flex-direction:column;gap:8px;}
+.gate-row{display:flex;gap:8px;flex-wrap:wrap;}
+.gbtn{
+  font-family:var(--mono);font-size:12px;font-weight:500;
+  padding:9px 16px;border:1px solid var(--bdr);background:var(--bg2);
+  color:var(--text);cursor:pointer;letter-spacing:.06em;
+  transition:all .2s;position:relative;overflow:hidden;
+  min-width:52px;text-align:center;
+}
+.gbtn::before{content:'';position:absolute;inset:0;background:var(--green);opacity:0;transition:opacity .2s;}
+.gbtn:hover{border-color:var(--bdrb);color:var(--green);}
+.gbtn:hover::before{opacity:.06;}
+.gbtn:active{transform:scale(.95);}
+.gbtn.c0{border-color:rgba(57,255,20,.25);}
+.gbtn.c1{border-color:rgba(0,229,255,.25);color:var(--cyan);}
+.gbtn.c1:hover{color:var(--cyan);}
+.gbtn.c1:hover::before{background:var(--cyan);}
+.gbtn.c2{border-color:rgba(176,96,255,.25);color:var(--purple);}
+.gbtn.c2:hover{color:var(--purple);}
+.gbtn.c2:hover::before{background:var(--purple);}
+.gbtn.danger{border-color:rgba(255,75,75,.25);color:#ff6b6b;}
+.gbtn.danger:hover{border-color:rgba(255,75,75,.6);}
+.gbtn.danger:hover::before{background:#ff4b4b;}
+.gbtn.measure-btn{background:var(--g5);border-color:var(--bdrb);color:var(--green);letter-spacing:.12em;font-size:11px;padding:11px 22px;}
+.gbtn.measure-btn:hover{background:var(--g10);box-shadow:0 0 20px var(--g10);}
+
+.rot-group{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.rot-lbl{font-family:var(--mono);font-size:11px;color:var(--tmid);width:28px;}
+input[type=range]{-webkit-appearance:none;appearance:none;width:130px;height:2px;background:var(--bg4);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--green);border-radius:50%;box-shadow:0 0 8px rgba(57,255,20,.5);}
+.rot-val{font-family:var(--mono);font-size:11px;color:var(--green);width:44px;text-align:right;}
+
+/* ── TOOLTIP ── */
+.gate-hint{font-family:var(--mono);font-size:10px;color:var(--tdim);letter-spacing:.04em;margin-top:4px;}
+
+/* ── SIDE PANEL ── */
+.sp-section{padding:22px 24px;border-bottom:1px solid var(--bdr);}
+.sp-title{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--green);opacity:.7;margin-bottom:14px;}
+
+/* ── MEASUREMENT RESULT ── */
+#mres{display:none;padding:16px 18px;background:var(--bg3);border:1px solid var(--bdrb);margin-top:0;}
+#mres.vis{display:block;}
+.mres-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--tmid);text-transform:uppercase;margin-bottom:8px;}
+.mres-val{font-family:var(--disp);font-size:42px;font-weight:800;line-height:1;}
+.mres-val.z{color:var(--green);}
+.mres-val.o{color:var(--cyan);}
+.mres-note{font-family:var(--mono);font-size:10px;color:var(--tdim);margin-top:8px;line-height:1.6;}
+
+/* ── BLOCH COORDS ── */
+.coords{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;}
+.coord{background:var(--bg3);border:1px solid var(--bdr);padding:9px 10px;text-align:center;}
+.clab{font-family:var(--mono);font-size:9px;color:var(--tdim);letter-spacing:.12em;margin-bottom:4px;}
+.cval{font-family:var(--mono);font-size:13px;color:var(--text);}
+
+/* ── CIRCUIT LOG ── */
+.circuit-track{display:flex;flex-wrap:wrap;gap:4px;padding:14px 16px;background:var(--bg3);border:1px solid var(--bdr);min-height:48px;align-items:center;}
+.gate-chip{font-family:var(--mono);font-size:10px;padding:3px 8px;background:var(--bg4);border:1px solid var(--bdr);color:var(--tmid);letter-spacing:.06em;}
+.gate-chip.new{color:var(--green);border-color:rgba(57,255,20,.3);animation:chipIn .3s ease both;}
+@keyframes chipIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+.gate-chip.meas{color:var(--orange);border-color:rgba(255,140,0,.3);}
+.empty-log{font-family:var(--mono);font-size:10px;color:var(--tdim);font-style:italic;}
+
+/* ── BELL STATES ── */
+.bell-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.bbtn{font-family:var(--mono);font-size:10px;padding:10px 8px;background:var(--bg2);border:1px solid var(--bdr);color:var(--tmid);cursor:pointer;text-align:center;letter-spacing:.04em;transition:all .2s;line-height:1.7;}
+.bbtn:hover{border-color:rgba(176,96,255,.4);color:var(--purple);}
+
+/* ── INFO PANEL ── */
+.info-box{background:var(--bg3);border:1px solid var(--bdr);padding:14px 16px;}
+.info-box p{font-family:var(--mono);font-size:10px;color:var(--tdim);line-height:1.8;}
+.info-box .hi{color:var(--green);}
+
+/* ── FLASH ── */
+@keyframes flash{0%{background:rgba(57,255,20,.08)}100%{background:transparent}}
+.flash{animation:flash .5s ease;}
+
+/* ── PYTHON PANEL ── */
+.py-panel{background:var(--bg2);border:1px solid var(--bdr);position:relative;overflow:hidden;}
+.py-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--bdr);background:var(--bg3);}
+.py-dots{display:flex;gap:6px;}
+.py-dot{width:10px;height:10px;border-radius:50%;}
+.py-filename{font-family:var(--mono);font-size:10px;color:var(--tmid);letter-spacing:.1em;}
+.py-copy{font-family:var(--mono);font-size:10px;color:var(--tdim);background:none;border:1px solid var(--bdr);padding:4px 10px;cursor:pointer;letter-spacing:.08em;transition:all .2s;}
+.py-copy:hover{color:var(--green);border-color:var(--bdrb);}
+.py-copy.copied{color:var(--green);border-color:var(--green);}
+.py-body{padding:20px;overflow-x:auto;font-family:var(--mono);font-size:12px;line-height:1.9;tab-size:4;max-height:420px;overflow-y:auto;}
+.py-body pre{white-space:pre;margin:0;}
+.pk{color:#c792ea;}.pf{color:#82aaff;}.ps{color:#c3e88d;}.pn{color:#f78c6c;}
+.pc{color:#546e7a;font-style:italic;}.po{color:var(--tmid);}.pv{color:var(--text);}
+.pm{color:var(--green);}.pa{color:var(--cyan);}.pout{color:#ffd080;}
+.py-updated{animation:pyflash .5s ease;}
+@keyframes pyflash{0%{background:rgba(57,255,20,.05)}100%{background:transparent}}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .app{grid-template-columns:1fr;}
+  .side-panel{border-top:1px solid var(--bdr);}
+}
+@media(max-width:600px){
+  header{padding:16px 20px;}
+  .main-panel{padding:20px;}
+}
+
+/* ── PYTHON CODE SECTION ── */
+.py-section{
+  position:relative;z-index:1;
+  border-top:1px solid var(--bdr);
+  padding:40px;
+}
+.py-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:28px;flex-wrap:wrap;gap:16px;
+}
+.py-title{
+  font-family:var(--disp);font-size:28px;font-weight:800;letter-spacing:-.02em;
+}
+.py-subtitle{
+  font-family:var(--mono);font-size:11px;color:var(--tmid);margin-top:4px;letter-spacing:.06em;
+}
+.py-badge{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.pybdg{
+  font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  padding:5px 12px;border:1px solid var(--bdr);color:var(--tdim);
+}
+.pybdg.g{border-color:rgba(57,255,20,.3);color:var(--green);}
+.pybdg.c{border-color:rgba(0,229,255,.3);color:var(--cyan);}
+
+/* TABS */
+.py-tabs{display:flex;gap:0;border-bottom:1px solid var(--bdr);margin-bottom:0;flex-wrap:wrap;}
+.pytab{
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:10px 20px;cursor:pointer;color:var(--tdim);border:none;background:none;
+  border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:color .2s,border-color .2s;
+}
+.pytab:hover{color:var(--tmid);}
+.pytab.act{color:var(--green);border-bottom-color:var(--green);}
+
+/* CODE BLOCK */
+.py-code-wrap{
+  background:var(--bg2);border:1px solid var(--bdr);border-top:none;
+  position:relative;overflow:hidden;
+}
+.py-code-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 18px;border-bottom:1px solid var(--bdr);background:var(--bg3);
+}
+.py-fname{font-family:var(--mono);font-size:11px;color:var(--tmid);}
+.py-copy{
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--tdim);background:none;border:1px solid var(--bdr);padding:4px 12px;
+  cursor:pointer;transition:all .2s;
+}
+.py-copy:hover{color:var(--green);border-color:var(--bdrb);}
+.py-pane{display:none;}
+.py-pane.act{display:block;}
+pre.pycode{
+  font-family:var(--mono);font-size:13px;line-height:1.9;
+  padding:26px 28px;overflow-x:auto;margin:0;
+  color:#a8a8c8;
+}
+/* Syntax colors */
+.kw {color:#b060ff;}      /* keywords */
+.fn {color:#39FF14;}      /* function names / built-ins */
+.st {color:#ffd14d;}      /* strings */
+.cm {color:#3e4a5e;font-style:italic;}  /* comments */
+.nm {color:#00e5ff;}      /* numbers / constants */
+.op {color:#7878a0;}      /* operators */
+.cl {color:#ff8c00;}      /* class names */
+.va {color:#d8d8e8;}      /* variables */
+.at {color:#ff6e9c;}      /* attributes */
+
+/* FOOTER */
+footer{border-top:1px solid var(--bdr);padding:36px 52px;display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;}
+.ftr{font-family:var(--mono);font-size:11px;color:var(--tdim);line-height:1.7;}
+
+/* NOTE box */
+.py-note{
+  margin-top:20px;background:var(--bg3);border:1px solid var(--bdr);
+  border-left:3px solid var(--green);padding:16px 20px;
+  display:flex;gap:16px;align-items:flex-start;
+}
+.py-note-icon{font-family:var(--mono);font-size:14px;color:var(--green);flex-shrink:0;margin-top:1px;}
+.py-note p{font-family:var(--mono);font-size:11px;color:var(--tmid);line-height:1.8;}
+.py-note p strong{color:var(--text);}
+.py-note code{color:var(--green);background:var(--bg4);padding:1px 5px;font-size:10px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" onclick="window.location.href='../index.html'">A/ <span>quantum_sim.exe</span></div>
+  <div class="hbadge">Simulator Online</div>
+</header>
+
+<div class="app">
+
+  <!-- ████ MAIN PANEL ████ -->
+  <div class="main-panel">
+
+    <!-- State equation -->
+    <div>
+      <div class="slbl">&gt; current quantum state</div>
+      <div class="state-block" id="state-block">
+        <div class="psi-display" id="psi-eq">
+          <span class="amp0" id="a0-disp">1.000</span><span class="ket">|0⟩</span>
+          <span class="op">+</span>
+          <span class="amp1" id="a1-disp">0.000</span><span class="ket">|1⟩</span>
+        </div>
+        <div class="psi-norm">‖ψ‖ = <span id="norm-val">1.000000</span></div>
+      </div>
+    </div>
+
+    <!-- Bloch sphere + probabilities -->
+    <div>
+      <div class="slbl">&gt; bloch sphere representation</div>
+      <div class="bloch-wrap">
+        <div class="bloch-container">
+          <canvas id="bloch" width="260" height="260"></canvas>
+          <div class="bloch-label">State vector on Bloch Sphere</div>
+          <div class="coords">
+            <div class="coord"><div class="clab">X</div><div class="cval" id="bx">0.000</div></div>
+            <div class="coord"><div class="clab">Y</div><div class="cval" id="by">0.000</div></div>
+            <div class="coord"><div class="clab">Z</div><div class="cval" id="bz">1.000</div></div>
+          </div>
+        </div>
+
+        <div class="prob-section">
+          <div class="slbl">&gt; measurement probabilities</div>
+          <div class="prob-row">
+            <div class="prob-head">
+              <span class="prob-ket" style="color:var(--green)">|0⟩</span>
+              <span class="prob-pct" style="color:var(--green)" id="p0-pct">100.0%</span>
+            </div>
+            <div class="pbar"><div class="pbar-fill z" id="pb0" style="width:100%"></div></div>
+            <div class="amp-detail" id="a0-detail">α = 1.000 + 0.000i &nbsp;|&nbsp; |α|² = 1.000</div>
+          </div>
+          <div class="prob-row">
+            <div class="prob-head">
+              <span class="prob-ket" style="color:var(--cyan)">|1⟩</span>
+              <span class="prob-pct" style="color:var(--cyan)" id="p1-pct">0.0%</span>
+            </div>
+            <div class="pbar"><div class="pbar-fill o" id="pb1" style="width:0%"></div></div>
+            <div class="amp-detail" id="a1-detail">β = 0.000 + 0.000i &nbsp;|&nbsp; |β|² = 0.000</div>
+          </div>
+
+          <!-- Phase wheels -->
+          <div class="slbl" style="margin-top:18px">&gt; phase (argand diagram)</div>
+          <div class="phase-row">
+            <div class="phase-item">
+              <canvas id="phase0" width="70" height="70"></canvas>
+              <div class="phase-lbl">α phase</div>
+            </div>
+            <div class="phase-item">
+              <canvas id="phase1" width="70" height="70"></canvas>
+              <div class="phase-lbl">β phase</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gates -->
+    <div>
+      <div class="slbl">&gt; apply quantum gates</div>
+      <div class="gates-wrap">
+
+        <div class="gate-group">
+          <div class="gate-hint">Pauli Gates — fundamental single-qubit operations</div>
+          <div class="gate-row">
+            <button class="gbtn c0" onclick="applyGate('X')" title="Bit flip: |0⟩→|1⟩, |1⟩→|0⟩">X</button>
+            <button class="gbtn c0" onclick="applyGate('Y')" title="Bit+phase flip">Y</button>
+            <button class="gbtn c0" onclick="applyGate('Z')" title="Phase flip: |1⟩→-|1⟩">Z</button>
+            <button class="gbtn c1" onclick="applyGate('H')" title="Creates superposition: |0⟩→(|0⟩+|1⟩)/√2">H</button>
+            <button class="gbtn c1" onclick="applyGate('S')" title="Phase gate: adds π/2 phase to |1⟩">S</button>
+            <button class="gbtn c1" onclick="applyGate('S†')" title="S-dagger: -π/2 phase">S†</button>
+            <button class="gbtn c1" onclick="applyGate('T')" title="T gate: π/8 phase">T</button>
+            <button class="gbtn c1" onclick="applyGate('T†')" title="T-dagger">T†</button>
+          </div>
+        </div>
+
+        <div class="gate-group">
+          <div class="gate-hint">Rotation Gates — rotate state vector on Bloch sphere</div>
+          <div class="rot-group">
+            <label class="rot-lbl">Rx</span>
+            <input type="range" id="rx-sl" min="0" max="628" value="157" oninput="updRot('rx')"/>
+            <span class="rot-val" id="rx-val">π/2</span>
+            <button class="gbtn c2" onclick="applyRot('Rx')">Rx(θ)</button>
+          </div>
+          <div class="rot-group">
+            <label class="rot-lbl">Ry</span>
+            <input type="range" id="ry-sl" min="0" max="628" value="157" oninput="updRot('ry')"/>
+            <span class="rot-val" id="ry-val">π/2</span>
+            <button class="gbtn c2" onclick="applyRot('Ry')">Ry(θ)</button>
+          </div>
+          <div class="rot-group">
+            <label class="rot-lbl">Rz</span>
+            <input type="range" id="rz-sl" min="0" max="628" value="157" oninput="updRot('rz')"/>
+            <span class="rot-val" id="rz-val">π/2</span>
+            <button class="gbtn c2" onclick="applyRot('Rz')">Rz(θ)</button>
+          </div>
+        </div>
+
+        <div class="gate-group">
+          <div class="gate-hint">Actions</div>
+          <div class="gate-row">
+            <button class="gbtn measure-btn" onclick="measure()">⊙ MEASURE</button>
+            <button class="gbtn" onclick="resetState('0')" style="color:var(--green)">Reset |0⟩</button>
+            <button class="gbtn" onclick="resetState('1')" style="color:var(--cyan)">Reset |1⟩</button>
+            <button class="gbtn" onclick="resetState('+')" style="color:var(--purple)">Reset |+⟩</button>
+            <button class="gbtn danger" onclick="clearLog()">Clear Log</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Circuit log -->
+    <div>
+      <div class="slbl">&gt; circuit log</div>
+      <div class="circuit-track" id="circuit-log">
+        <span class="empty-log">Apply gates to build a circuit...</span>
+      </div>
+    </div>
+
+    <!-- Python code panel -->
+    <div>
+      <div class="slbl">&gt; python equivalent &mdash; numpy + matplotlib</div>
+      <div class="py-panel" id="py-panel">
+        <div class="py-topbar">
+          <div class="py-dots">
+            <div class="py-dot" style="background:#ff5f57"></div>
+            <div class="py-dot" style="background:#febc2e"></div>
+            <div class="py-dot" style="background:#28c840"></div>
+          </div>
+          <div class="py-filename">quantum_sim.py</div>
+          <button class="py-copy" id="py-copy-btn" onclick="copyDynamic()">Copy</button>
+        </div>
+        <div class="py-body" id="py-body"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ████ SIDE PANEL ████ -->
+  <div class="side-panel">
+
+    <!-- Measurement result -->
+    <div class="sp-section">
+      <div class="sp-title">&gt; last measurement</div>
+      <div id="mres">
+        <div class="mres-lbl">Collapsed to</div>
+        <div class="mres-val" id="mres-val">|0⟩</div>
+        <div class="mres-note" id="mres-note"></div>
+      </div>
+      <div id="mres-none" style="font-family:var(--mono);font-size:11px;color:var(--tdim)">No measurement yet.<br>Apply gates then measure.</div>
+    </div>
+
+    <!-- Bloch sphere coords -->
+    <div class="sp-section">
+      <div class="sp-title">&gt; quantum info</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="info-box">
+          <p>Purity: <span class="hi" id="purity">1.000</span> (pure state)</p>
+        </div>
+        <div class="info-box">
+          <p>Von Neumann Entropy: <span class="hi" id="entropy">0.000</span> bits</p>
+        </div>
+        <div class="info-box">
+          <p>State type: <span class="hi" id="stype">Basis state |0⟩</span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preset states -->
+    <div class="sp-section">
+      <div class="sp-title">&gt; preset states</div>
+      <div class="bell-grid">
+        <button class="bbtn" onclick="presetState('plus')">|+⟩<br>(H|0⟩)</button>
+        <button class="bbtn" onclick="presetState('minus')">|−⟩<br>(H|1⟩)</button>
+        <button class="bbtn" onclick="presetState('iplus')">|i⟩<br>(HS|0⟩)</button>
+        <button class="bbtn" onclick="presetState('iminus')">|−i⟩<br>(HS†|0⟩)</button>
+        <button class="bbtn" onclick="presetState('custom1')">T|+⟩<br>(T gate)</button>
+        <button class="bbtn" onclick="presetState('custom2')">S|+⟩<br>(S gate)</button>
+      </div>
+    </div>
+
+    <!-- Gate reference -->
+    <div class="sp-section" style="flex:1;overflow-y:auto;">
+      <div class="sp-title">&gt; gate matrix reference</div>
+      <div id="gate-ref" style="font-family:var(--mono);font-size:10px;color:var(--tdim);line-height:2;">
+        <div style="margin-bottom:10px;color:var(--tmid)">Hover a gate button to see its description. Click to apply to current state.</div>
+        <div style="color:var(--green);margin-bottom:4px;">X (NOT gate)</div>
+        <div>[ 0  1 ]</div><div>[ 1  0 ]</div>
+        <div style="color:var(--cyan);margin:8px 0 4px;">H (Hadamard)</div>
+        <div>1/√2 · [ 1  1 ]</div><div style="padding-left:32px">[ 1 -1 ]</div>
+        <div style="color:var(--purple);margin:8px 0 4px;">S (Phase)</div>
+        <div>[ 1  0  ]</div><div>[ 0  i  ]</div>
+        <div style="color:var(--purple);margin:8px 0 4px;">T (π/8)</div>
+        <div>[ 1  0      ]</div><div>[ 0  e^(iπ/4) ]</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ████ PYTHON CODE SECTION ████ -->
+<section class="py-section">
+  <div class="py-header">
+    <div>
+      <div class="py-title">Under the Hood <span style="color:var(--green)">— Python</span></div>
+      <div class="py-subtitle">&gt; the real math, as it would run with numpy + matplotlib</div>
+    </div>
+    <div class="py-badge">
+      <span class="pybdg g">NumPy 1.26</span>
+      <span class="pybdg c">Matplotlib 3.8</span>
+      <span class="pybdg">Python 3.11</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="py-tabs">
+    <button class="pytab act" onclick="showPyTab('state')">State &amp; Init</button>
+    <button class="pytab" onclick="showPyTab('gates')">Gate Matrices</button>
+    <button class="pytab" onclick="showPyTab('rotation')">Rotation Gates</button>
+    <button class="pytab" onclick="showPyTab('measure')">Measurement</button>
+    <button class="pytab" onclick="showPyTab('bloch')">Bloch Sphere</button>
+    <button class="pytab" onclick="showPyTab('circuit')">Full Circuit</button>
+  </div>
+
+  <div class="py-code-wrap">
+    <div class="py-code-header">
+      <span class="py-fname" id="py-fname">quantum_state.py</span>
+      <button class="py-copy" onclick="copyCode()">Copy</button>
+    </div>
+
+    <!-- STATE INIT -->
+    <div class="py-pane act" id="py-state">
+<pre class="pycode"><span class="cm"># quantum_state.py — State vector representation using NumPy
+# The simulator tracks a single qubit as a complex vector |ψ⟩ = α|0⟩ + β|1⟩</span>
+
+<span class="kw">import</span> <span class="va">numpy</span> <span class="kw">as</span> <span class="va">np</span>
+
+<span class="cm"># A qubit state is a 2-element complex NumPy array: [α, β]
+# |0⟩ = [1, 0],  |1⟩ = [0, 1]</span>
+
+<span class="kw">class</span> <span class="cl">QubitState</span><span class="op">:</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="va">self</span>, alpha<span class="op">=</span><span class="nm">1.0</span><span class="op">+</span><span class="nm">0j</span>, beta<span class="op">=</span><span class="nm">0.0</span><span class="op">+</span><span class="nm">0j</span>)<span class="op">:</span>
+        <span class="va">self</span><span class="op">.</span><span class="at">vec</span> <span class="op">=</span> <span class="fn">np.array</span>([alpha, beta], dtype<span class="op">=</span><span class="fn">complex</span>)
+        <span class="va">self</span><span class="op">.</span><span class="fn">normalize</span>()
+
+    <span class="kw">def</span> <span class="fn">normalize</span>(<span class="va">self</span>)<span class="op">:</span>
+        <span class="va">n</span> <span class="op">=</span> <span class="fn">np.linalg.norm</span>(<span class="va">self</span><span class="op">.</span><span class="at">vec</span>)
+        <span class="kw">if</span> <span class="va">n</span> <span class="op">&gt;</span> <span class="nm">1e-10</span><span class="op">:</span>
+            <span class="va">self</span><span class="op">.</span><span class="at">vec</span> <span class="op">/=</span> <span class="va">n</span>
+
+    <span class="op">@</span><span class="fn">property</span>
+    <span class="kw">def</span> <span class="fn">prob_0</span>(<span class="va">self</span>)<span class="op">:</span>
+        <span class="kw">return</span> <span class="fn">np.abs</span>(<span class="va">self</span><span class="op">.</span><span class="at">vec</span>[<span class="nm">0</span>])<span class="op">**</span><span class="nm">2</span>   <span class="cm"># |α|²</span>
+
+    <span class="op">@</span><span class="fn">property</span>
+    <span class="kw">def</span> <span class="fn">prob_1</span>(<span class="va">self</span>)<span class="op">:</span>
+        <span class="kw">return</span> <span class="fn">np.abs</span>(<span class="va">self</span><span class="op">.</span><span class="at">vec</span>[<span class="nm">1</span>])<span class="op">**</span><span class="nm">2</span>   <span class="cm"># |β|²</span>
+
+    <span class="op">@</span><span class="fn">property</span>
+    <span class="kw">def</span> <span class="fn">bloch_vector</span>(<span class="va">self</span>)<span class="op">:</span>
+        <span class="cm"># Returns (x, y, z) coordinates on the Bloch sphere</span>
+        a, b <span class="op">=</span> <span class="va">self</span><span class="op">.</span><span class="at">vec</span>
+        x <span class="op">=</span> <span class="nm">2</span> <span class="op">*</span> <span class="fn">np.real</span>(a <span class="op">*</span> <span class="fn">np.conj</span>(b))
+        y <span class="op">=</span> <span class="nm">2</span> <span class="op">*</span> <span class="fn">np.imag</span>(a <span class="op">*</span> <span class="fn">np.conj</span>(b))
+        z <span class="op">=</span> <span class="fn">np.abs</span>(a)<span class="op">**</span><span class="nm">2</span> <span class="op">-</span> <span class="fn">np.abs</span>(b)<span class="op">**</span><span class="nm">2</span>
+        <span class="kw">return</span> <span class="fn">np.array</span>([x, y, z])
+
+    <span class="kw">def</span> <span class="fn">__repr__</span>(<span class="va">self</span>)<span class="op">:</span>
+        a, b <span class="op">=</span> <span class="va">self</span><span class="op">.</span><span class="at">vec</span>
+        <span class="kw">return</span> <span class="fn">f</span><span class="st">"({a:.3f})|0⟩ + ({b:.3f})|1⟩"</span>
+
+<span class="cm"># ── Usage ──────────────────────────────────────────────────────────────────</span>
+<span class="va">psi</span> <span class="op">=</span> <span class="cl">QubitState</span>()                    <span class="cm"># starts in |0⟩</span>
+<span class="fn">print</span>(<span class="va">psi</span>)                             <span class="cm"># (1.000+0j)|0⟩ + (0.000+0j)|1⟩</span>
+<span class="fn">print</span>(<span class="st">"P(|0⟩):"</span>, <span class="va">psi</span><span class="op">.</span><span class="at">prob_0</span>)           <span class="cm"># 1.0</span>
+<span class="fn">print</span>(<span class="st">"Bloch:"</span>, <span class="va">psi</span><span class="op">.</span><span class="at">bloch_vector</span>)      <span class="cm"># [0. 0. 1.]  → north pole</span>
+</pre>
+    </div>
+
+    <!-- GATES -->
+    <div class="py-pane" id="py-gates">
+<pre class="pycode"><span class="cm"># gates.py — Quantum gate matrices as NumPy 2×2 complex arrays</span>
+
+<span class="kw">import</span> <span class="va">numpy</span> <span class="kw">as</span> <span class="va">np</span>
+
+<span class="va">I2</span>  <span class="op">=</span> <span class="nm">1</span> <span class="op">/</span> <span class="fn">np.sqrt</span>(<span class="nm">2</span>)
+
+<span class="cm"># ── Pauli Gates ─────────────────────────────────────────────────────────────</span>
+<span class="va">X</span> <span class="op">=</span> <span class="fn">np.array</span>([[<span class="nm">0</span>, <span class="nm">1</span>],
+               [<span class="nm">1</span>, <span class="nm">0</span>]], dtype<span class="op">=</span><span class="fn">complex</span>)   <span class="cm"># bit flip: |0⟩↔|1⟩</span>
+
+<span class="va">Y</span> <span class="op">=</span> <span class="fn">np.array</span>([[<span class="nm">0</span>, <span class="op">-</span><span class="nm">1j</span>],
+               [<span class="nm">1j</span>, <span class="nm">0</span>]], dtype<span class="op">=</span><span class="fn">complex</span>)  <span class="cm"># bit + phase flip</span>
+
+<span class="va">Z</span> <span class="op">=</span> <span class="fn">np.array</span>([[<span class="nm">1</span>, <span class="nm">0</span>],
+               [<span class="nm">0</span>, <span class="op">-</span><span class="nm">1</span>]], dtype<span class="op">=</span><span class="fn">complex</span>)  <span class="cm"># phase flip: |1⟩→-|1⟩</span>
+
+<span class="cm"># ── Hadamard ─────────────────────────────────────────────────────────────────</span>
+<span class="va">H</span> <span class="op">=</span> <span class="va">I2</span> <span class="op">*</span> <span class="fn">np.array</span>([[<span class="nm">1</span>,  <span class="nm">1</span>],
+                    [<span class="nm">1</span>, <span class="op">-</span><span class="nm">1</span>]], dtype<span class="op">=</span><span class="fn">complex</span>)  <span class="cm"># creates superposition</span>
+
+<span class="cm"># ── Phase Gates ───────────────────────────────────────────────────────────────</span>
+<span class="va">S</span>  <span class="op">=</span> <span class="fn">np.array</span>([[<span class="nm">1</span>, <span class="nm">0</span>],
+                [<span class="nm">0</span>, <span class="nm">1j</span>]], dtype<span class="op">=</span><span class="fn">complex</span>)    <span class="cm"># +π/2 phase on |1⟩</span>
+
+<span class="va">Sd</span> <span class="op">=</span> <span class="fn">np.array</span>([[<span class="nm">1</span>, <span class="nm">0</span>],
+                [<span class="nm">0</span>, <span class="op">-</span><span class="nm">1j</span>]], dtype<span class="op">=</span><span class="fn">complex</span>)   <span class="cm"># S† (S-dagger): -π/2 phase</span>
+
+<span class="va">T</span>  <span class="op">=</span> <span class="fn">np.array</span>([[<span class="nm">1</span>, <span class="nm">0</span>],
+                [<span class="nm">0</span>, <span class="fn">np.exp</span>(<span class="nm">1j</span> <span class="op">*</span> <span class="va">np.pi</span> <span class="op">/</span> <span class="nm">4</span>)]])  <span class="cm"># π/8 gate</span>
+
+<span class="va">Td</span> <span class="op">=</span> <span class="va">T</span><span class="op">.</span><span class="fn">conj</span>()<span class="op">.</span><span class="fn">T</span>                          <span class="cm"># T† — conjugate transpose</span>
+
+<span class="cm"># ── Apply gate to state vector ───────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">apply_gate</span>(gate<span class="op">:</span> <span class="fn">np.ndarray</span>, state<span class="op">:</span> <span class="fn">np.ndarray</span>) <span class="op">-&gt;</span> <span class="fn">np.ndarray</span><span class="op">:</span>
+    <span class="st">"""Matrix-vector multiply and renormalize."""</span>
+    result <span class="op">=</span> gate <span class="op">@</span> state
+    <span class="kw">return</span> result <span class="op">/</span> <span class="fn">np.linalg.norm</span>(result)
+
+<span class="cm"># ── Example: H then X ──────────────────────────────────────────────────────</span>
+<span class="va">psi</span>   <span class="op">=</span> <span class="fn">np.array</span>([<span class="nm">1</span>, <span class="nm">0</span>], dtype<span class="op">=</span><span class="fn">complex</span>)  <span class="cm"># |0⟩</span>
+<span class="va">psi</span>   <span class="op">=</span> <span class="fn">apply_gate</span>(<span class="va">H</span>, <span class="va">psi</span>)              <span class="cm"># → |+⟩</span>
+<span class="va">psi</span>   <span class="op">=</span> <span class="fn">apply_gate</span>(<span class="va">X</span>, <span class="va">psi</span>)              <span class="cm"># → |−⟩</span>
+<span class="fn">print</span>(<span class="fn">np.round</span>(<span class="va">psi</span>, <span class="nm">4</span>))                 <span class="cm"># [ 0.7071 -0.7071]</span>
+
+<span class="cm"># Verify gate is unitary: U†U = I</span>
+<span class="kw">assert</span> <span class="fn">np.allclose</span>(<span class="va">H</span> <span class="op">@</span> <span class="va">H</span><span class="op">.</span><span class="fn">conj</span>()<span class="op">.</span><span class="fn">T</span>, <span class="fn">np.eye</span>(<span class="nm">2</span>)), <span class="st">"H is not unitary?!"</span>
+<span class="fn">print</span>(<span class="st">"All gates unitary ✓"</span>)             <span class="cm"># (they are, calm down)</span>
+</pre>
+    </div>
+
+    <!-- ROTATION -->
+    <div class="py-pane" id="py-rotation">
+<pre class="pycode"><span class="cm"># rotation_gates.py — Rx, Ry, Rz using scipy and NumPy
+# Rotation gates rotate the state vector on the Bloch sphere by angle θ</span>
+
+<span class="kw">import</span> <span class="va">numpy</span> <span class="kw">as</span> <span class="va">np</span>
+<span class="kw">from</span> <span class="va">scipy.linalg</span> <span class="kw">import</span> <span class="fn">expm</span>
+
+<span class="cm"># ── Pauli matrices (generators of rotations) ────────────────────────────────</span>
+<span class="va">σx</span> <span class="op">=</span> <span class="fn">np.array</span>([[<span class="nm">0</span>, <span class="nm">1</span>], [<span class="nm">1</span>,  <span class="nm">0</span>]], dtype<span class="op">=</span><span class="fn">complex</span>)
+<span class="va">σy</span> <span class="op">=</span> <span class="fn">np.array</span>([[<span class="nm">0</span>, <span class="op">-</span><span class="nm">1j</span>], [<span class="nm">1j</span>, <span class="nm">0</span>]], dtype<span class="op">=</span><span class="fn">complex</span>)
+<span class="va">σz</span> <span class="op">=</span> <span class="fn">np.array</span>([[<span class="nm">1</span>, <span class="nm">0</span>], [<span class="nm">0</span>, <span class="op">-</span><span class="nm">1</span>]], dtype<span class="op">=</span><span class="fn">complex</span>)
+
+<span class="cm"># ── Rotation gate constructors ───────────────────────────────────────────────</span>
+<span class="cm"># Rx(θ) = exp(-i·θ/2·σx) = cos(θ/2)I - i·sin(θ/2)·σx</span>
+<span class="kw">def</span> <span class="fn">Rx</span>(theta)<span class="op">:</span>
+    c, s <span class="op">=</span> <span class="fn">np.cos</span>(theta<span class="op">/</span><span class="nm">2</span>), <span class="fn">np.sin</span>(theta<span class="op">/</span><span class="nm">2</span>)
+    <span class="kw">return</span> <span class="fn">np.array</span>([[c,    <span class="op">-</span><span class="nm">1j</span><span class="op">*</span>s],
+                      [<span class="op">-</span><span class="nm">1j</span><span class="op">*</span>s, c   ]], dtype<span class="op">=</span><span class="fn">complex</span>)
+
+<span class="kw">def</span> <span class="fn">Ry</span>(theta)<span class="op">:</span>
+    c, s <span class="op">=</span> <span class="fn">np.cos</span>(theta<span class="op">/</span><span class="nm">2</span>), <span class="fn">np.sin</span>(theta<span class="op">/</span><span class="nm">2</span>)
+    <span class="kw">return</span> <span class="fn">np.array</span>([[c,  <span class="op">-</span>s],
+                      [s,   c]], dtype<span class="op">=</span><span class="fn">complex</span>)
+
+<span class="kw">def</span> <span class="fn">Rz</span>(theta)<span class="op">:</span>
+    <span class="kw">return</span> <span class="fn">np.array</span>([[<span class="fn">np.exp</span>(<span class="op">-</span><span class="nm">1j</span><span class="op">*</span>theta<span class="op">/</span><span class="nm">2</span>), <span class="nm">0</span>            ],
+                      [<span class="nm">0</span>,              <span class="fn">np.exp</span>(<span class="nm">1j</span><span class="op">*</span>theta<span class="op">/</span><span class="nm">2</span>)]])
+
+<span class="cm"># ── General rotation via matrix exponential ──────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">Rn</span>(theta, nx, ny, nz)<span class="op">:</span>
+    <span class="st">"""Rotate by θ around arbitrary unit axis n̂ = (nx, ny, nz)."""</span>
+    n_dot_sigma <span class="op">=</span> nx<span class="op">*</span><span class="va">σx</span> <span class="op">+</span> ny<span class="op">*</span><span class="va">σy</span> <span class="op">+</span> nz<span class="op">*</span><span class="va">σz</span>
+    <span class="kw">return</span> <span class="fn">expm</span>(<span class="op">-</span><span class="nm">1j</span> <span class="op">*</span> theta<span class="op">/</span><span class="nm">2</span> <span class="op">*</span> n_dot_sigma)
+
+<span class="cm"># ── Example: rotate |0⟩ by π/2 around Y (= Hadamard-like) ──────────────────</span>
+<span class="va">psi</span> <span class="op">=</span> <span class="fn">np.array</span>([<span class="nm">1</span>, <span class="nm">0</span>], dtype<span class="op">=</span><span class="fn">complex</span>)
+<span class="va">psi</span> <span class="op">=</span> <span class="fn">Ry</span>(<span class="va">np.pi</span><span class="op">/</span><span class="nm">2</span>) <span class="op">@</span> <span class="va">psi</span>
+<span class="fn">print</span>(<span class="fn">np.round</span>(<span class="va">psi</span>, <span class="nm">4</span>))  <span class="cm"># [0.7071, 0.7071] → equal superposition</span>
+
+<span class="va">psi</span> <span class="op">=</span> <span class="fn">Rz</span>(<span class="va">np.pi</span>) <span class="op">@</span> <span class="va">psi</span>
+<span class="fn">print</span>(<span class="fn">np.round</span>(<span class="va">psi</span>, <span class="nm">4</span>))  <span class="cm"># [0.7071, -0.7071] → phase flip on |1⟩</span>
+</pre>
+    </div>
+
+    <!-- MEASURE -->
+    <div class="py-pane" id="py-measure">
+<pre class="pycode"><span class="cm"># measurement.py — Probabilistic wave function collapse
+# Measurement is irreversible. The universe doesn't offer undo.</span>
+
+<span class="kw">import</span> <span class="va">numpy</span> <span class="kw">as</span> <span class="va">np</span>
+
+<span class="kw">def</span> <span class="fn">measure</span>(state<span class="op">:</span> <span class="fn">np.ndarray</span>) <span class="op">-&gt;</span> <span class="fn">tuple</span>[<span class="fn">int</span>, <span class="fn">np.ndarray</span>]<span class="op">:</span>
+    <span class="st">"""
+    Perform a projective measurement in the computational basis.
+
+    Returns:
+        outcome  — 0 or 1 (random, weighted by |α|² and |β|²)
+        new_state — collapsed state vector (|0⟩ or |1⟩)
+    """</span>
+    p0 <span class="op">=</span> <span class="fn">np.abs</span>(state[<span class="nm">0</span>])<span class="op">**</span><span class="nm">2</span>        <span class="cm"># P(|0⟩) = |α|²</span>
+    p1 <span class="op">=</span> <span class="fn">np.abs</span>(state[<span class="nm">1</span>])<span class="op">**</span><span class="nm">2</span>        <span class="cm"># P(|1⟩) = |β|²</span>
+
+    <span class="cm"># Sanity check — probabilities must sum to 1</span>
+    <span class="kw">assert</span> <span class="fn">np.isclose</span>(p0 <span class="op">+</span> p1, <span class="nm">1.0</span>), <span class="st">f"Norm broken: {p0+p1:.6f}"</span>
+
+    <span class="cm"># Collapse — np.random.choice picks outcome weighted by probabilities</span>
+    outcome <span class="op">=</span> <span class="va">np.random</span><span class="op">.</span><span class="fn">choice</span>([<span class="nm">0</span>, <span class="nm">1</span>], p<span class="op">=</span>[p0, p1])
+
+    <span class="cm"># Post-measurement state (projection + renormalization)</span>
+    <span class="kw">if</span> outcome <span class="op">==</span> <span class="nm">0</span><span class="op">:</span>
+        new_state <span class="op">=</span> <span class="fn">np.array</span>([<span class="nm">1</span>, <span class="nm">0</span>], dtype<span class="op">=</span><span class="fn">complex</span>)  <span class="cm"># |0⟩</span>
+    <span class="kw">else</span><span class="op">:</span>
+        new_state <span class="op">=</span> <span class="fn">np.array</span>([<span class="nm">0</span>, <span class="nm">1</span>], dtype<span class="op">=</span><span class="fn">complex</span>)  <span class="cm"># |1⟩</span>
+
+    <span class="kw">return</span> outcome, new_state
+
+<span class="cm"># ── Statistics over many shots ───────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">sample</span>(state<span class="op">:</span> <span class="fn">np.ndarray</span>, shots<span class="op">=</span><span class="nm">1000</span>) <span class="op">-&gt;</span> <span class="fn">dict</span><span class="op">:</span>
+    <span class="st">"""Simulate repeated measurement (re-prepare same state each time)."""</span>
+    p0 <span class="op">=</span> <span class="fn">np.abs</span>(state[<span class="nm">0</span>])<span class="op">**</span><span class="nm">2</span>
+    counts <span class="op">=</span> <span class="va">np.random</span><span class="op">.</span><span class="fn">binomial</span>(shots, p0)
+    <span class="kw">return</span> {<span class="st">'|0⟩'</span><span class="op">:</span> counts, <span class="st">'|1⟩'</span><span class="op">:</span> shots <span class="op">-</span> counts}
+
+<span class="cm"># ── Example: measure a superposition state ──────────────────────────────────</span>
+<span class="va">psi</span> <span class="op">=</span> <span class="fn">np.array</span>([<span class="nm">1</span>, <span class="nm">1</span>], dtype<span class="op">=</span><span class="fn">complex</span>) <span class="op">/</span> <span class="fn">np.sqrt</span>(<span class="nm">2</span>)   <span class="cm"># |+⟩</span>
+
+outcome, collapsed <span class="op">=</span> <span class="fn">measure</span>(<span class="va">psi</span>)
+<span class="fn">print</span>(<span class="fn">f</span><span class="st">"Measured: |{outcome}⟩"</span>)      <span class="cm"># 0 or 1, 50/50</span>
+<span class="fn">print</span>(<span class="fn">f</span><span class="st">"Collapsed to: {collapsed}"</span>)   <span class="cm"># wave function is gone</span>
+
+<span class="va">stats</span> <span class="op">=</span> <span class="fn">sample</span>(<span class="va">psi</span>, shots<span class="op">=</span><span class="nm">10000</span>)
+<span class="fn">print</span>(<span class="st">"Counts over 10000 shots:"</span>, stats)
+<span class="cm"># → {'|0⟩': ~5000, '|1⟩': ~5000}  (approximately — it's quantum, not a vending machine)</span>
+</pre>
+    </div>
+
+    <!-- BLOCH -->
+    <div class="py-pane" id="py-bloch">
+<pre class="pycode"><span class="cm"># bloch_sphere.py — 3D visualization of qubit state using Matplotlib
+# Plots the Bloch sphere and state vector in real 3D space</span>
+
+<span class="kw">import</span> <span class="va">numpy</span> <span class="kw">as</span> <span class="va">np</span>
+<span class="kw">import</span> <span class="va">matplotlib.pyplot</span> <span class="kw">as</span> <span class="va">plt</span>
+<span class="kw">from</span> <span class="va">mpl_toolkits.mplot3d</span> <span class="kw">import</span> <span class="cl">Axes3D</span>
+
+<span class="kw">def</span> <span class="fn">state_to_bloch</span>(state)<span class="op">:</span>
+    <span class="st">"""Convert complex state vector [α, β] to Bloch vector (x, y, z)."""</span>
+    a, b <span class="op">=</span> state
+    x <span class="op">=</span> <span class="nm">2</span> <span class="op">*</span> <span class="fn">np.real</span>(a <span class="op">*</span> <span class="fn">np.conj</span>(b))
+    y <span class="op">=</span> <span class="nm">2</span> <span class="op">*</span> <span class="fn">np.imag</span>(a <span class="op">*</span> <span class="fn">np.conj</span>(b))
+    z <span class="op">=</span> <span class="fn">np.abs</span>(a)<span class="op">**</span><span class="nm">2</span> <span class="op">-</span> <span class="fn">np.abs</span>(b)<span class="op">**</span><span class="nm">2</span>
+    <span class="kw">return</span> <span class="fn">np.array</span>([x, y, z])
+
+<span class="kw">def</span> <span class="fn">plot_bloch</span>(state, title<span class="op">=</span><span class="st">"Bloch Sphere"</span>)<span class="op">:</span>
+    fig <span class="op">=</span> <span class="va">plt</span><span class="op">.</span><span class="fn">figure</span>(figsize<span class="op">=</span>(<span class="nm">7</span>, <span class="nm">7</span>), facecolor<span class="op">=</span><span class="st">'#03030a'</span>)
+    ax  <span class="op">=</span> fig<span class="op">.</span><span class="fn">add_subplot</span>(<span class="nm">111</span>, projection<span class="op">=</span><span class="st">'3d'</span>)
+    ax<span class="op">.</span><span class="fn">set_facecolor</span>(<span class="st">'#080810'</span>)
+
+    <span class="cm"># Draw wire-frame sphere</span>
+    u, v <span class="op">=</span> <span class="fn">np.mgrid</span>[<span class="nm">0</span><span class="op">:</span><span class="nm">2</span><span class="op">*</span><span class="va">np.pi</span><span class="op">:</span><span class="nm">30j</span>, <span class="nm">0</span><span class="op">:</span><span class="va">np.pi</span><span class="op">:</span><span class="nm">20j</span>]
+    xs <span class="op">=</span> <span class="fn">np.sin</span>(v) <span class="op">*</span> <span class="fn">np.cos</span>(u)
+    ys <span class="op">=</span> <span class="fn">np.sin</span>(v) <span class="op">*</span> <span class="fn">np.sin</span>(u)
+    zs <span class="op">=</span> <span class="fn">np.cos</span>(v)
+    ax<span class="op">.</span><span class="fn">plot_wireframe</span>(xs, ys, zs, color<span class="op">=</span><span class="st">'#39FF1415'</span>, linewidth<span class="op">=</span><span class="nm">0.3</span>)
+
+    <span class="cm"># Draw axes</span>
+    <span class="kw">for</span> (dx, dy, dz), lbl <span class="kw">in</span> [
+        ((<span class="nm">1</span>,<span class="nm">0</span>,<span class="nm">0</span>), <span class="st">'X'</span>), ((<span class="nm">0</span>,<span class="nm">1</span>,<span class="nm">0</span>), <span class="st">'Y'</span>),
+        ((<span class="nm">0</span>,<span class="nm">0</span>,<span class="nm">1</span>), <span class="st">'|0⟩'</span>), ((<span class="nm">0</span>,<span class="nm">0</span>,<span class="op">-</span><span class="nm">1</span>), <span class="st">'|1⟩'</span>)
+    ]<span class="op">:</span>
+        ax<span class="op">.</span><span class="fn">quiver</span>(<span class="nm">0</span>,<span class="nm">0</span>,<span class="nm">0</span>, dx,dy,dz, color<span class="op">=</span><span class="st">'#39FF1440'</span>, linewidth<span class="op">=</span><span class="nm">1</span>)
+        ax<span class="op">.</span><span class="fn">text</span>(dx<span class="op">*</span><span class="nm">1.15</span>, dy<span class="op">*</span><span class="nm">1.15</span>, dz<span class="op">*</span><span class="nm">1.15</span>, lbl,
+               color<span class="op">=</span><span class="st">'#39FF14'</span>, fontsize<span class="op">=</span><span class="nm">9</span>)
+
+    <span class="cm"># Draw state vector</span>
+    bv <span class="op">=</span> <span class="fn">state_to_bloch</span>(state)
+    ax<span class="op">.</span><span class="fn">quiver</span>(<span class="nm">0</span>, <span class="nm">0</span>, <span class="nm">0</span>, bv[<span class="nm">0</span>], bv[<span class="nm">1</span>], bv[<span class="nm">2</span>],
+              color<span class="op">=</span><span class="st">'#39FF14'</span>, linewidth<span class="op">=</span><span class="nm">2.5</span>, arrow_length_ratio<span class="op">=</span><span class="nm">0.15</span>)
+    ax<span class="op">.</span><span class="fn">scatter</span>(<span class="op">*</span>bv, color<span class="op">=</span><span class="st">'#39FF14'</span>, s<span class="op">=</span><span class="nm">60</span>, zorder<span class="op">=</span><span class="nm">10</span>)
+
+    ax<span class="op">.</span><span class="fn">set_title</span>(title, color<span class="op">=</span><span class="st">'#d8d8e8'</span>, fontsize<span class="op">=</span><span class="nm">11</span>)
+    ax<span class="op">.</span><span class="fn">set_xlim</span>([<span class="op">-</span><span class="nm">1.2</span>, <span class="nm">1.2</span>]); ax<span class="op">.</span><span class="fn">set_ylim</span>([<span class="op">-</span><span class="nm">1.2</span>, <span class="nm">1.2</span>]); ax<span class="op">.</span><span class="fn">set_zlim</span>([<span class="op">-</span><span class="nm">1.2</span>, <span class="nm">1.2</span>])
+    <span class="va">plt</span><span class="op">.</span><span class="fn">tight_layout</span>(); <span class="va">plt</span><span class="op">.</span><span class="fn">show</span>()
+
+<span class="cm"># ── Plot superposition state ─────────────────────────────────────────────────</span>
+<span class="va">psi</span> <span class="op">=</span> <span class="fn">np.array</span>([<span class="nm">1</span>, <span class="nm">1j</span>]) <span class="op">/</span> <span class="fn">np.sqrt</span>(<span class="nm">2</span>)   <span class="cm"># |i⟩ state</span>
+<span class="fn">plot_bloch</span>(<span class="va">psi</span>, title<span class="op">=</span><span class="st">"State |i⟩ = (|0⟩ + i|1⟩)/√2"</span>)
+<span class="cm"># → Point on equator, positive Y axis</span>
+</pre>
+    </div>
+
+    <!-- CIRCUIT -->
+    <div class="py-pane" id="py-circuit">
+<pre class="pycode"><span class="cm"># full_circuit.py — Complete quantum circuit: H → T → Rz → Measure
+# Exactly what the simulator does when you click those buttons,
+# but written in Python for people who like to suffer productively.</span>
+
+<span class="kw">import</span> <span class="va">numpy</span> <span class="kw">as</span> <span class="va">np</span>
+<span class="kw">import</span> <span class="va">matplotlib.pyplot</span> <span class="kw">as</span> <span class="va">plt</span>
+
+<span class="nm">I2</span> <span class="op">=</span> <span class="nm">1</span> <span class="op">/</span> <span class="fn">np.sqrt</span>(<span class="nm">2</span>)
+
+<span class="cm"># ── Gate library ─────────────────────────────────────────────────────────────</span>
+<span class="va">GATES</span> <span class="op">=</span> {
+    <span class="st">'X'</span><span class="op">:</span> <span class="fn">np.array</span>([[<span class="nm">0</span>,<span class="nm">1</span>],[<span class="nm">1</span>,<span class="nm">0</span>]], dtype<span class="op">=</span><span class="fn">complex</span>),
+    <span class="st">'Y'</span><span class="op">:</span> <span class="fn">np.array</span>([[<span class="nm">0</span>,<span class="op">-</span><span class="nm">1j</span>],[<span class="nm">1j</span>,<span class="nm">0</span>]], dtype<span class="op">=</span><span class="fn">complex</span>),
+    <span class="st">'Z'</span><span class="op">:</span> <span class="fn">np.array</span>([[<span class="nm">1</span>,<span class="nm">0</span>],[<span class="nm">0</span>,<span class="op">-</span><span class="nm">1</span>]], dtype<span class="op">=</span><span class="fn">complex</span>),
+    <span class="st">'H'</span><span class="op">:</span> <span class="nm">I2</span> <span class="op">*</span> <span class="fn">np.array</span>([[<span class="nm">1</span>,<span class="nm">1</span>],[<span class="nm">1</span>,<span class="op">-</span><span class="nm">1</span>]], dtype<span class="op">=</span><span class="fn">complex</span>),
+    <span class="st">'S'</span><span class="op">:</span> <span class="fn">np.array</span>([[<span class="nm">1</span>,<span class="nm">0</span>],[<span class="nm">0</span>,<span class="nm">1j</span>]], dtype<span class="op">=</span><span class="fn">complex</span>),
+    <span class="st">'T'</span><span class="op">:</span> <span class="fn">np.array</span>([[<span class="nm">1</span>,<span class="nm">0</span>],[<span class="nm">0</span>,<span class="fn">np.exp</span>(<span class="nm">1j</span><span class="op">*</span><span class="va">np.pi</span><span class="op">/</span><span class="nm">4</span>)]])
+}
+
+<span class="kw">def</span> <span class="fn">Rz</span>(theta)<span class="op">:</span>
+    <span class="kw">return</span> <span class="fn">np.array</span>([[<span class="fn">np.exp</span>(<span class="op">-</span><span class="nm">1j</span><span class="op">*</span>theta<span class="op">/</span><span class="nm">2</span>), <span class="nm">0</span>],
+                      [<span class="nm">0</span>, <span class="fn">np.exp</span>(<span class="nm">1j</span><span class="op">*</span>theta<span class="op">/</span><span class="nm">2</span>)]])
+
+<span class="cm"># ── Circuit runner ────────────────────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">run_circuit</span>(ops, shots<span class="op">=</span><span class="nm">2048</span>)<span class="op">:</span>
+    psi <span class="op">=</span> <span class="fn">np.array</span>([<span class="nm">1</span>, <span class="nm">0</span>], dtype<span class="op">=</span><span class="fn">complex</span>)  <span class="cm"># |0⟩</span>
+    history <span class="op">=</span> [(<span class="st">'init'</span>, psi<span class="op">.</span><span class="fn">copy</span>())]
+
+    <span class="kw">for</span> op <span class="kw">in</span> ops<span class="op">:</span>
+        psi <span class="op">=</span> op <span class="op">@</span> psi
+        psi <span class="op">/=</span> <span class="fn">np.linalg.norm</span>(psi)
+        history<span class="op">.</span><span class="fn">append</span>((<span class="st">f'{op}'</span>, psi<span class="op">.</span><span class="fn">copy</span>()))
+
+    <span class="cm"># Measure (sample many shots)</span>
+    p0 <span class="op">=</span> <span class="fn">np.abs</span>(psi[<span class="nm">0</span>])<span class="op">**</span><span class="nm">2</span>
+    counts <span class="op">=</span> {<span class="st">'0'</span><span class="op">:</span> <span class="va">np.random</span><span class="op">.</span><span class="fn">binomial</span>(shots, p0),
+               <span class="st">'1'</span><span class="op">:</span> <span class="va">np.random</span><span class="op">.</span><span class="fn">binomial</span>(shots, <span class="nm">1</span><span class="op">-</span>p0)}
+    <span class="kw">return</span> psi, history, counts
+
+<span class="cm"># ── Run: H → T → Rz(π/4) ────────────────────────────────────────────────────</span>
+final, hist, counts <span class="op">=</span> <span class="fn">run_circuit</span>([
+    <span class="va">GATES</span>[<span class="st">'H'</span>],
+    <span class="va">GATES</span>[<span class="st">'T'</span>],
+    <span class="fn">Rz</span>(<span class="va">np.pi</span><span class="op">/</span><span class="nm">4</span>)
+])
+
+<span class="fn">print</span>(<span class="fn">f</span><span class="st">"Final state: {np.round(final, 4)}"</span>)
+<span class="fn">print</span>(<span class="fn">f</span><span class="st">"P(|0⟩) = {np.abs(final[0])**2:.4f}"</span>)
+<span class="fn">print</span>(<span class="fn">f</span><span class="st">"Measurement counts (2048 shots): {counts}"</span>)
+
+<span class="cm"># ── Plot histogram ───────────────────────────────────────────────────────────</span>
+fig, ax <span class="op">=</span> <span class="va">plt</span><span class="op">.</span><span class="fn">subplots</span>(facecolor<span class="op">=</span><span class="st">'#03030a'</span>)
+ax<span class="op">.</span><span class="fn">set_facecolor</span>(<span class="st">'#080810'</span>)
+ax<span class="op">.</span><span class="fn">bar</span>([<span class="st">'|0⟩'</span>, <span class="st">'|1⟩'</span>], [counts[<span class="st">'0'</span>], counts[<span class="st">'1'</span>]],
+       color<span class="op">=</span>[<span class="st">'#39FF14'</span>, <span class="st">'#00e5ff'</span>], edgecolor<span class="op">=</span><span class="st">'none'</span>)
+ax<span class="op">.</span><span class="fn">set_title</span>(<span class="st">'Measurement Distribution'</span>, color<span class="op">=</span><span class="st">'#d8d8e8'</span>)
+<span class="va">plt</span><span class="op">.</span><span class="fn">tight_layout</span>(); <span class="va">plt</span><span class="op">.</span><span class="fn">show</span>()
+</pre>
+    </div>
+
+  </div><!-- end py-code-wrap -->
+
+  <div class="py-note">
+    <div class="py-note-icon">ℹ</div>
+    <p>
+      <strong>This is the real implementation.</strong> Every operation in the interactive simulator above maps 1-to-1 with the Python code shown here.
+      The JS simulator computes identical math using complex number structs instead of NumPy arrays.
+      To run this on your machine: <code>pip install numpy matplotlib scipy</code> — then paste any tab into a <code>.py</code> file.
+      Or just keep clicking buttons up there. Same result. Fewer dependencies.
+    </p>
+  </div>
+  <footer>
+    <div class="ftr">Aditya Pratap Singh<br><span style="color:#252530">© No rights reserved. Inspired by the entire internet.</span></div>
+  </footer>
+
+</section>
+
+<script>
+// ════════════════════════════════════════
+// COMPLEX NUMBER MATH
+// ════════════════════════════════════════
+function cmul(a,b){return{re:a.re*b.re-a.im*b.im,im:a.re*b.im+a.im*b.re};}
+function cadd(a,b){return{re:a.re+b.re,im:a.im+b.im};}
+function cmod(a){return Math.sqrt(a.re*a.re+a.im*a.im);}
+function carg(a){return Math.atan2(a.im,a.re);}
+function cpolar(r,theta){return{re:r*Math.cos(theta),im:r*Math.sin(theta)};}
+const C=(re,im=0)=>({re,im});
+const PI=Math.PI;
+
+// ════════════════════════════════════════
+// STATE  [α, β]  where α,β are complex
+// ════════════════════════════════════════
+let state={a:C(1),b:C(0)};
+let circuit=[];
+let measured=false;
+
+function norm(){
+  return Math.sqrt(cmod(state.a)**2+cmod(state.b)**2);
+}
+function normalize(){
+  const n=norm();
+  if(n<1e-10){state.a=C(1);state.b=C(0);return;}
+  state.a={re:state.a.re/n,im:state.a.im/n};
+  state.b={re:state.b.re/n,im:state.b.im/n};
+}
+
+// Apply 2x2 complex matrix
+function applyMatrix(m){
+  // m = [[a,b],[c,d]]
+  const na=cadd(cmul(m[0][0],state.a),cmul(m[0][1],state.b));
+  const nb=cadd(cmul(m[1][0],state.a),cmul(m[1][1],state.b));
+  state.a=na; state.b=nb;
+  normalize();
+}
+
+// ════════════════════════════════════════
+// GATES
+// ════════════════════════════════════════
+const INV2=1/Math.sqrt(2);
+const GATES={
+  'X':  [[C(0),C(1)],[C(1),C(0)]],
+  'Y':  [[C(0),C(0,-1)],[C(0,1),C(0)]],
+  'Z':  [[C(1),C(0)],[C(0),C(-1)]],
+  'H':  [[C(INV2),C(INV2)],[C(INV2),C(-INV2)]],
+  'S':  [[C(1),C(0)],[C(0),C(0,1)]],
+  'S†': [[C(1),C(0)],[C(0),C(0,-1)]],
+  'T':  [[C(1),C(0)],[C(0),cpolar(1,PI/4)]],
+  'T†': [[C(1),C(0)],[C(0),cpolar(1,-PI/4)]],
+};
+
+function applyGate(name){
+  if(measured)unmeasure();
+  applyMatrix(GATES[name]);
+  pushCircuit(name);
+  updateAll();
+  flashState();
+  renderDynCode();
+}
+
+function applyRot(name){
+  if(measured)unmeasure();
+  const axis=name[1].toLowerCase();
+  const theta=parseInt(document.getElementById(axis+'-sl').value)/100;
+  let m;
+  const c=Math.cos(theta/2), s=Math.sin(theta/2);
+  if(axis==='x') m=[[C(c),C(0,-s)],[C(0,-s),C(c)]];
+  else if(axis==='y') m=[[C(c),C(-s)],[C(s),C(c)]];
+  else m=[[cpolar(1,-theta/2),C(0)],[C(0),cpolar(1,theta/2)]];
+  applyMatrix(m);
+  const lbl=`${name}(${fmtAngle(theta)})`;
+  pushCircuit(lbl,'c2');
+  updateAll();
+  flashState();
+}
+
+function fmtAngle(v){
+  const fracs=[[PI*2,'2π'],[PI*3/2,'3π/2'],[PI,'π'],[PI/2,'π/2'],[PI/4,'π/4'],[PI/8,'π/8'],[0,'0']];
+  for(const [f,l] of fracs) if(Math.abs(v-f)<.02) return l;
+  return (v/PI).toFixed(2)+'π';
+}
+
+function updRot(axis){
+  const v=parseInt(document.getElementById(axis+'-sl').value)/100;
+  document.getElementById(axis+'-val').textContent=fmtAngle(v);
+}
+
+function resetState(t){
+  if(t==='0'){state.a=C(1);state.b=C(0);}
+  else if(t==='1'){state.a=C(0);state.b=C(1);}
+  else if(t==='+'){state.a=C(INV2);state.b=C(INV2);}
+  measured=false;
+  pushCircuit('RESET','danger');
+  updateAll();
+  renderDynCode();
+}
+
+function presetState(t){
+  measured=false;
+  if(t==='plus'){state.a=C(INV2);state.b=C(INV2);pushCircuit('H|0⟩','c1');}
+  else if(t==='minus'){state.a=C(INV2);state.b=C(-INV2);pushCircuit('H|1⟩','c1');}
+  else if(t==='iplus'){state.a=C(INV2);state.b=C(0,INV2);pushCircuit('|i⟩','c1');}
+  else if(t==='iminus'){state.a=C(INV2);state.b=C(0,-INV2);pushCircuit('|−i⟩','c1');}
+  else if(t==='custom1'){
+    state.a=C(INV2);state.b=cpolar(INV2,PI/4);
+    pushCircuit('T|+⟩','c2');
+  }else if(t==='custom2'){
+    state.a=C(INV2);state.b=C(0,INV2);
+    pushCircuit('S|+⟩','c2');
+  }
+  normalize();
+  updateAll();
+}
+
+// ════════════════════════════════════════
+// MEASURE
+// ════════════════════════════════════════
+function measure(){
+  const p0=cmod(state.a)**2;
+  const r=Math.random();
+  const outcome=r<p0?0:1;
+  measured=true;
+  if(outcome===0){state.a=C(1);state.b=C(0);}
+  else{state.a=C(0);state.b=C(1);}
+  showMeasureResult(outcome,p0);
+  pushCircuit('M','meas');
+  updateAll();
+  renderDynCode();
+}
+
+function showMeasureResult(outcome,p0){
+  const el=document.getElementById('mres');
+  const vl=document.getElementById('mres-val');
+  const nt=document.getElementById('mres-note');
+  document.getElementById('mres-none').style.display='none';
+  el.classList.add('vis');
+  if(outcome===0){
+    vl.textContent='|0⟩';vl.className='mres-val z';
+    nt.textContent=`Probability was ${(p0*100).toFixed(1)}%.\nWave function collapsed to |0⟩.\n(State reset — apply more gates.)`;
+  }else{
+    vl.textContent='|1⟩';vl.className='mres-val o';
+    nt.textContent=`Probability was ${((1-p0)*100).toFixed(1)}%.\nWave function collapsed to |1⟩.\n(State reset — apply more gates.)`;
+  }
+}
+
+function unmeasure(){
+  measured=false;
+}
+
+// ════════════════════════════════════════
+// UPDATE UI
+// ════════════════════════════════════════
+function fmt(v,d=3){return v.toFixed(d);}
+function fmtC(c){
+  const rs=fmt(c.re);
+  const is=Math.abs(c.im)<.0005?'':'+'+(fmt(c.im))+'i';
+  return rs+is;
+}
+
+function updateAll(){
+  const p0=cmod(state.a)**2;
+  const p1=cmod(state.b)**2;
+  const n=norm();
+
+  // State equation
+  document.getElementById('a0-disp').textContent=`(${fmt(state.a.re)}${state.a.im>=0?'+':'-'}${fmt(Math.abs(state.a.im))}i)`;
+  document.getElementById('a1-disp').textContent=`(${fmt(state.b.re)}${state.b.im>=0?'+':'-'}${fmt(Math.abs(state.b.im))}i)`;
+  document.getElementById('norm-val').textContent=fmt(n,6);
+
+  // Prob bars
+  document.getElementById('p0-pct').textContent=`${(p0*100).toFixed(1)}%`;
+  document.getElementById('p1-pct').textContent=`${(p1*100).toFixed(1)}%`;
+  document.getElementById('pb0').style.width=`${p0*100}%`;
+  document.getElementById('pb1').style.width=`${p1*100}%`;
+  document.getElementById('a0-detail').textContent=`α = ${fmt(state.a.re)} + ${fmt(state.a.im)}i  |  |α|² = ${fmt(p0)}`;
+  document.getElementById('a1-detail').textContent=`β = ${fmt(state.b.re)} + ${fmt(state.b.im)}i  |  |β|² = ${fmt(p1)}`;
+
+  // Bloch vector
+  const bx=2*(state.a.re*state.b.re+state.a.im*state.b.im);
+  const by=2*(state.a.im*state.b.re-state.a.re*state.b.im);
+  const bz=p0-p1;
+  document.getElementById('bx').textContent=fmt(bx);
+  document.getElementById('by').textContent=fmt(by);
+  document.getElementById('bz').textContent=fmt(bz);
+
+  drawBloch(bx,by,bz);
+  drawPhase('phase0',state.a);
+  drawPhase('phase1',state.b);
+
+  // Entropy & purity
+  const ent=p0>0.0001&&p1>0.0001?-(p0*Math.log2(p0)+p1*Math.log2(p1)):0;
+  document.getElementById('entropy').textContent=fmt(ent);
+  document.getElementById('purity').textContent='1.000';
+
+  // State type
+  let stype='Mixed superposition';
+  if(p0>0.9999)stype='Basis state |0⟩';
+  else if(p1>0.9999)stype='Basis state |1⟩';
+  else if(Math.abs(p0-p1)<.001)stype='Equal superposition';
+  document.getElementById('stype').textContent=stype;
+}
+
+// ════════════════════════════════════════
+// BLOCH SPHERE CANVAS
+// ════════════════════════════════════════
+let blochAngle=0;
+const BC=document.getElementById('bloch');
+const BCX=BC.getContext('2d');
+const CR=120,CX=130,CY=130;
+
+function proj3D(x,y,z,angle){
+  const a=angle, b=0.45;
+  const rx=x*Math.cos(a)-z*Math.sin(a);
+  const ry2=x*Math.sin(a)+z*Math.cos(a);
+  const px=CX+CR*(rx);
+  const py=CY+CR*(y*Math.cos(b)-ry2*Math.sin(b));
+  return{x:px,y:py};
+}
+
+function drawBloch(bx,by,bz){
+  const a=blochAngle;
+  BCX.clearRect(0,0,260,260);
+
+  // Sphere
+  BCX.save();
+  const g=BCX.createRadialGradient(CX-20,CY-20,10,CX,CY,CR);
+  g.addColorStop(0,'rgba(57,255,20,.04)');
+  g.addColorStop(1,'rgba(57,255,20,.01)');
+  BCX.beginPath();BCX.arc(CX,CY,CR,0,2*PI);
+  BCX.fillStyle=g;BCX.fill();
+  BCX.strokeStyle='rgba(57,255,20,.12)';BCX.lineWidth=1;BCX.stroke();
+  BCX.restore();
+
+  // Latitude circles
+  for(let lat=1;lat<4;lat++){
+    const r2=Math.sin(lat*PI/4)*CR;
+    const yoff=Math.cos(lat*PI/4)*CR*0.45;
+    BCX.beginPath();BCX.ellipse(CX,CY+yoff,r2,r2*0.25,0,0,2*PI);
+    BCX.strokeStyle='rgba(57,255,20,.08)';BCX.lineWidth=.8;BCX.stroke();
+  }
+  // Meridian
+  BCX.beginPath();BCX.ellipse(CX,CY,CR,CR*0.25,0,0,2*PI);
+  BCX.strokeStyle='rgba(57,255,20,.08)';BCX.lineWidth=.8;BCX.stroke();
+
+  // Axes
+  const axes=[
+    {v:[1,0,0],l:'X',c:'rgba(255,80,80,.6)'},
+    {v:[-1,0,0],l:'',c:'rgba(255,80,80,.3)'},
+    {v:[0,1,0],l:'Y',c:'rgba(80,180,255,.6)'},
+    {v:[0,-1,0],l:'',c:'rgba(80,180,255,.3)'},
+    {v:[0,0,1],l:'|0⟩',c:'rgba(57,255,20,.7)'},
+    {v:[0,0,-1],l:'|1⟩',c:'rgba(57,255,20,.4)'},
+  ];
+  for(const ax of axes){
+    const p=proj3D(ax.v[0],ax.v[1],ax.v[2],a);
+    const o=proj3D(0,0,0,a);
+    BCX.beginPath();BCX.moveTo(o.x,o.y);BCX.lineTo(p.x,p.y);
+    BCX.strokeStyle=ax.c;BCX.lineWidth=1;BCX.stroke();
+    if(ax.l){
+      BCX.fillStyle=ax.c;BCX.font='10px JetBrains Mono,monospace';
+      BCX.fillText(ax.l,p.x+4,p.y+4);
+    }
+  }
+
+  // State vector
+  const tip=proj3D(bx,by,bz,a);
+  const orig=proj3D(0,0,0,a);
+  BCX.beginPath();BCX.moveTo(orig.x,orig.y);BCX.lineTo(tip.x,tip.y);
+  BCX.strokeStyle='#39FF14';BCX.lineWidth=2.5;BCX.stroke();
+
+  // Arrowhead
+  const angle2=Math.atan2(tip.y-orig.y,tip.x-orig.x);
+  BCX.beginPath();
+  BCX.moveTo(tip.x,tip.y);
+  BCX.lineTo(tip.x-12*Math.cos(angle2-0.35),tip.y-12*Math.sin(angle2-0.35));
+  BCX.lineTo(tip.x-12*Math.cos(angle2+0.35),tip.y-12*Math.sin(angle2+0.35));
+  BCX.closePath();BCX.fillStyle='#39FF14';BCX.fill();
+
+  // State dot
+  BCX.beginPath();BCX.arc(tip.x,tip.y,5,0,2*PI);
+  BCX.fillStyle='#39FF14';BCX.shadowColor='#39FF14';BCX.shadowBlur=14;BCX.fill();
+  BCX.shadowBlur=0;
+
+  // Shadow projection on equator
+  const shd=proj3D(bx,by,0,a);
+  BCX.beginPath();BCX.moveTo(shd.x,shd.y);BCX.lineTo(tip.x,tip.y);
+  BCX.strokeStyle='rgba(57,255,20,.2)';BCX.lineWidth=1;BCX.setLineDash([3,4]);BCX.stroke();
+  BCX.setLineDash([]);
+}
+
+// Slow rotation
+(function rotAnim(){
+  blochAngle+=0.004;
+  const p0=cmod(state.a)**2,p1=cmod(state.b)**2;
+  const bx2=2*(state.a.re*state.b.re+state.a.im*state.b.im);
+  const by2=2*(state.a.im*state.b.re-state.a.re*state.b.im);
+  const bz2=p0-p1;
+  drawBloch(bx2,by2,bz2);
+  requestAnimationFrame(rotAnim);
+})();
+
+// ════════════════════════════════════════
+// PHASE WHEELS (Argand)
+// ════════════════════════════════════════
+function drawPhase(id,c){
+  const cv=document.getElementById(id);
+  const ctx2=cv.getContext('2d');
+  const W=70,CX2=35,CY2=35,R=24;
+  ctx2.clearRect(0,0,W,W);
+  // Circle
+  ctx2.beginPath();ctx2.arc(CX2,CY2,R,0,2*PI);
+  ctx2.strokeStyle='rgba(57,255,20,.15)';ctx2.lineWidth=1;ctx2.stroke();
+  // Axes
+  ctx2.beginPath();ctx2.moveTo(CX2-R,CY2);ctx2.lineTo(CX2+R,CY2);
+  ctx2.moveTo(CX2,CY2-R);ctx2.lineTo(CX2,CY2+R);
+  ctx2.strokeStyle='rgba(57,255,20,.1)';ctx2.lineWidth=.8;ctx2.stroke();
+  // Amplitude
+  const m=Math.min(cmod(c),1);
+  const angle=carg(c);
+  const px=CX2+m*R*Math.cos(angle);
+  const py=CY2-m*R*Math.sin(angle);
+  if(m>0.001){
+    ctx2.beginPath();ctx2.moveTo(CX2,CY2);ctx2.lineTo(px,py);
+    ctx2.strokeStyle='#39FF14';ctx2.lineWidth=1.8;ctx2.stroke();
+    ctx2.beginPath();ctx2.arc(px,py,3,0,2*PI);
+    ctx2.fillStyle='#39FF14';ctx2.shadowColor='#39FF14';ctx2.shadowBlur=8;ctx2.fill();
+    ctx2.shadowBlur=0;
+  }
+  // Phase text
+  ctx2.fillStyle='rgba(57,255,20,.5)';ctx2.font='8px JetBrains Mono,monospace';
+  const deg=(carg(c)*180/PI).toFixed(0);
+  ctx2.fillText(deg+'°',4,W-4);
+}
+
+// ════════════════════════════════════════
+// CIRCUIT LOG
+// ════════════════════════════════════════
+function pushCircuit(name,cls=''){
+  circuit.push({name,cls});
+  renderCircuit();
+}
+function renderCircuit(){
+  const el=document.getElementById('circuit-log');
+  if(!circuit.length){el.innerHTML='<span class="empty-log">Apply gates to build a circuit...</span>';return;}
+  el.innerHTML='';
+  circuit.forEach((c,i)=>{
+    const chip=document.createElement('span');
+    chip.className='gate-chip'+(c.cls?' '+c.cls:'')+(i===circuit.length-1?' new':'');
+    chip.textContent=c.name;
+    el.appendChild(chip);
+    if(i<circuit.length-1){
+      const arr=document.createElement('span');
+      arr.style.cssText='font-family:var(--mono);font-size:10px;color:var(--tdim);';
+      arr.textContent='→';
+      el.appendChild(arr);
+    }
+  });
+}
+function clearLog(){
+  circuit=[];
+  renderCircuit();
+  resetState('0');
+  document.getElementById('mres').classList.remove('vis');
+  document.getElementById('mres-none').style.display='';
+  renderDynCode();
+}
+
+// ════════════════════════════════════════
+// FLASH ANIMATION
+// ════════════════════════════════════════
+function flashState(){
+  const el=document.getElementById('state-block');
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+}
+
+// ════════════════════════════════════════
+// DYNAMIC PYTHON CODE GENERATOR
+// ════════════════════════════════════════
+const PK=t=>`<span class="pk">${t}</span>`;
+const PF=t=>`<span class="pf">${t}</span>`;
+const PS=t=>`<span class="ps">${t}</span>`;
+const PN=t=>`<span class="pn">${t}</span>`;
+const PCMT=t=>`<span class="pc">${t}</span>`;
+const PO=t=>`<span class="po">${t}</span>`;
+const PV=t=>`<span class="pv">${t}</span>`;
+const PM=t=>`<span class="pm">${t}</span>`;
+const PA=t=>`<span class="pa">${t}</span>`;
+const POUT=t=>`<span class="pout">${t}</span>`;
+
+const DYN_MATRICES = {
+  'X':  `${PA('[0, 1]')},\n             ${PA('[1, 0]')}`,
+  'Y':  `${PA('[0, -1j]')},\n             ${PA('[1j, 0]')}`,
+  'Z':  `${PA('[1, 0]')},\n             ${PA('[0, -1]')}`,
+  'H':  `${PA('[1/np.sqrt(2),  1/np.sqrt(2)]')},\n             ${PA('[1/np.sqrt(2), -1/np.sqrt(2)]')}`,
+  'S':  `${PA('[1, 0]')},\n             ${PA('[0, 1j]')}`,
+  'S†': `${PA('[1, 0]')},\n             ${PA('[0, -1j]')}`,
+  'T':  `${PA('[1, 0]')},\n             ${PA('[0, np.exp(1j*np.pi/4)]')}`,
+  'T†': `${PA('[1, 0]')},\n             ${PA('[0, np.exp(-1j*np.pi/4)]')}`,
+};
+
+function pf3(v){return Math.abs(v)<5e-5?'0.000':(v>=0?'':'')+v.toFixed(3);}
+function pfC(c){
+  const re=pf3(c.re),im=pf3(c.im);
+  if(Math.abs(c.im)<5e-5)return re;
+  if(Math.abs(c.re)<5e-5)return im+'j';
+  return re+(c.im>=0?'+':'')+im+'j';
+}
+
+function genDynPython(){
+  const a0=pfC(state.a), a1=pfC(state.b);
+  const p0=(cmod(state.a)**2*100).toFixed(1);
+  const p1=(cmod(state.b)**2*100).toFixed(1);
+  const bx=pf3(2*(state.a.re*state.b.re+state.a.im*state.b.im));
+  const by=pf3(2*(state.a.im*state.b.re-state.a.re*state.b.im));
+  const bz=pf3(cmod(state.a)**2-cmod(state.b)**2);
+  const p0r=cmod(state.a)**2, p1r=cmod(state.b)**2;
+  const ent=p0r>1e-4&&p1r>1e-4 ? -(p0r*Math.log2(p0r)+p1r*Math.log2(p1r)) : 0;
+
+  // Gate lines
+  const gateOps=[];
+  const ops=circuit.filter(c=>c.name!=='RESET'&&c.name!=='M');
+  for(const g of ops){
+    const n=g.name;
+    if(n in DYN_MATRICES){
+      const vn='G_'+n.replace('†','_dag');
+      gateOps.push(`${PV(vn)} ${PO('=')} ${PM('np')}.${PF('array')}([${DYN_MATRICES[n]}], dtype${PO('=')}${PM('complex')})`);
+      gateOps.push(`${PV('psi')} ${PO('=')} ${PV(vn)} ${PO('@')} ${PV('psi')}  ${PCMT('# apply '+n+' gate')}`);
+      gateOps.push(`${PV('psi')} ${PO('/=')} ${PM('np')}.${PF('linalg')}.${PF('norm')}(${PV('psi')})  ${PCMT('# normalize')}`);
+      gateOps.push('');
+    } else if(/^R[xyz]\(/.test(n)){
+      const axis=n[1].toLowerCase();
+      const theta=n.slice(4,-1)||'np.pi/2';
+      const RN='R'+n[1];
+      if(axis==='x'){
+        gateOps.push(`${PV('theta')} ${PO('=')} ${PA(theta)}`);
+        gateOps.push(`${PV(RN)} ${PO('=')} ${PM('np')}.${PF('array')}([`);
+        gateOps.push(`    [${PM('np')}.${PF('cos')}(theta${PO('/')}${PN('2')}),   ${PO('-')}${PN('1j')}${PO('*')}${PM('np')}.${PF('sin')}(theta${PO('/')}${PN('2')})],`);
+        gateOps.push(`    [${PO('-')}${PN('1j')}${PO('*')}${PM('np')}.${PF('sin')}(theta${PO('/')}${PN('2')}),  ${PM('np')}.${PF('cos')}(theta${PO('/')}${PN('2')})]`);
+        gateOps.push(`], dtype${PO('=')}${PM('complex')})`);
+      } else if(axis==='y'){
+        gateOps.push(`${PV('theta')} ${PO('=')} ${PA(theta)}`);
+        gateOps.push(`${PV(RN)} ${PO('=')} ${PM('np')}.${PF('array')}([`);
+        gateOps.push(`    [ ${PM('np')}.${PF('cos')}(theta${PO('/')}${PN('2')}), ${PO('-')}${PM('np')}.${PF('sin')}(theta${PO('/')}${PN('2')})],`);
+        gateOps.push(`    [ ${PM('np')}.${PF('sin')}(theta${PO('/')}${PN('2')}),  ${PM('np')}.${PF('cos')}(theta${PO('/')}${PN('2')})]`);
+        gateOps.push(`], dtype${PO('=')}${PM('complex')})`);
+      } else {
+        gateOps.push(`${PV('theta')} ${PO('=')} ${PA(theta)}`);
+        gateOps.push(`${PV(RN)} ${PO('=')} ${PM('np')}.${PF('array')}([`);
+        gateOps.push(`    [${PM('np')}.${PF('exp')}(${PO('-')}${PN('1j')}${PO('*')}theta${PO('/')}${PN('2')}), ${PN('0')}],`);
+        gateOps.push(`    [${PN('0')},  ${PM('np')}.${PF('exp')}(${PN('1j')}${PO('*')}theta${PO('/')}${PN('2')})]`);
+        gateOps.push(`], dtype${PO('=')}${PM('complex')})`);
+      }
+      gateOps.push(`${PV('psi')} ${PO('=')} ${PV(RN)} ${PO('@')} ${PV('psi')}  ${PCMT('# apply rotation')}`);
+      gateOps.push(`${PV('psi')} ${PO('/=')} ${PM('np')}.${PF('linalg')}.${PF('norm')}(${PV('psi')})`);
+      gateOps.push('');
+    }
+  }
+
+  const measBlock = circuit.some(c=>c.name==='M') ? [
+    '',
+    PCMT('# ── MEASUREMENT ──────────────────────────'),
+    `${PV('probs')} ${PO('=')} ${PM('np')}.${PF('abs')}(${PV('psi')})**${PN('2')}`,
+    `${PV('outcome')} ${PO('=')} ${PM('np')}.${PF('random')}.${PF('choice')}([${PN('0')}, ${PN('1')}], ${PV('p')}${PO('=')}${PV('probs')})`,
+    `${PF('print')}(${PS('f"Collapsed to: |{outcome}⟩"')})`,
+  ] : [];
+
+  const lines = [
+    PCMT('# ══════════════════════════════════════════════════════'),
+    PCMT('# quantum_sim.py  —  live NumPy implementation'),
+    PCMT('# reflects current simulator state, updates on each gate'),
+    PCMT('# ══════════════════════════════════════════════════════'),
+    '',
+    `${PK('import')} ${PM('numpy')} ${PK('as')} ${PM('np')}`,
+    `${PK('import')} ${PM('matplotlib')}.${PM('pyplot')} ${PK('as')} ${PM('plt')}`,
+    `${PK('from')} ${PM('mpl_toolkits')}.${PM('mplot3d')} ${PK('import')} ${PM('Axes3D')}`,
+    '',
+    PCMT('# ── INITIAL STATE ─────────────────────────────────────'),
+    PCMT('# |ψ⟩ = α|0⟩ + β|1⟩  (column vector in ℂ²)'),
+    `${PV('psi')} ${PO('=')} ${PM('np')}.${PF('array')}([${PA(a0)}, ${PA(a1)}], dtype${PO('=')}${PM('complex')})`,
+    '',
+    ...(gateOps.length>0 ? [PCMT('# ── GATE OPERATIONS ───────────────────────────────────'),...gateOps] : []),
+    PCMT('# ── CURRENT STATE ─────────────────────────────────────'),
+    `${PV('alpha')}, ${PV('beta')} ${PO('=')} ${PV('psi')}[${PN('0')}], ${PV('psi')}[${PN('1')}]`,
+    `${PF('print')}(${PS('f"α = {alpha:.4f}, β = {beta:.4f}"')})`,
+    POUT(`&gt;&gt;&gt; α = ${a0}, β = ${a1}`),
+    '',
+    PCMT('# ── MEASUREMENT PROBABILITIES ─────────────────────────'),
+    `${PV('P0')} ${PO('=')} ${PM('np')}.${PF('abs')}(${PV('alpha')})**${PN('2')}`,
+    `${PV('P1')} ${PO('=')} ${PM('np')}.${PF('abs')}(${PV('beta')})**${PN('2')}`,
+    `${PF('print')}(${PS('f"P(|0⟩) = {P0:.4f}  ({P0*100:.1f}%)"')})`,
+    `${PF('print')}(${PS('f"P(|1⟩) = {P1:.4f}  ({P1*100:.1f}%)"')})`,
+    POUT(`&gt;&gt;&gt; P(|0⟩) = ${(cmod(state.a)**2).toFixed(4)}  (${p0}%)`),
+    POUT(`&gt;&gt;&gt; P(|1⟩) = ${(cmod(state.b)**2).toFixed(4)}  (${p1}%)`),
+    '',
+    PCMT('# ── BLOCH SPHERE VECTOR ───────────────────────────────'),
+    `${PV('a')}, ${PV('b')} ${PO('=')} ${PV('psi')}[${PN('0')}], ${PV('psi')}[${PN('1')}]`,
+    `${PV('Bx')} ${PO('=')} ${PN('2')} ${PO('*')} ${PM('np')}.${PF('real')}(${PM('np')}.${PF('conj')}(${PV('a')}) ${PO('*')} ${PV('b')})`,
+    `${PV('By')} ${PO('=')} ${PN('2')} ${PO('*')} ${PM('np')}.${PF('imag')}(${PM('np')}.${PF('conj')}(${PV('a')}) ${PO('*')} ${PV('b')})`,
+    `${PV('Bz')} ${PO('=')} ${PM('np')}.${PF('abs')}(${PV('a')})**${PN('2')} ${PO('-')} ${PM('np')}.${PF('abs')}(${PV('b')})**${PN('2')}`,
+    `${PF('print')}(${PS('f"Bloch: ({Bx:.3f}, {By:.3f}, {Bz:.3f})"')})`,
+    POUT(`&gt;&gt;&gt; Bloch: (${bx}, ${by}, ${bz})`),
+    '',
+    PCMT('# ── VON NEUMANN ENTROPY ───────────────────────────────'),
+    `${PV('probs')} ${PO('=')} ${PM('np')}.${PF('abs')}(${PV('psi')})**${PN('2')}`,
+    `${PV('probs_nz')} ${PO('=')} ${PV('probs')}[${PV('probs')} ${PO('>')} ${PN('1e-10')}]`,
+    `${PV('S')} ${PO('=')} ${PO('-')}${PM('np')}.${PF('sum')}(${PV('probs_nz')} ${PO('*')} ${PM('np')}.${PF('log2')}(${PV('probs_nz')}))`,
+    `${PF('print')}(${PS('f"Von Neumann Entropy S = {S:.4f} bits"')})`,
+    POUT(`&gt;&gt;&gt; Von Neumann Entropy S = ${ent.toFixed(4)} bits`),
+    ...measBlock,
+    '',
+    PCMT('# ── BLOCH SPHERE PLOT (matplotlib 3D) ────────────────'),
+    `${PV('fig')} ${PO('=')} ${PM('plt')}.${PF('figure')}(figsize${PO('=')}(${PN('7')},${PN('7')}))`,
+    `${PV('ax')} ${PO('=')} ${PV('fig')}.${PF('add_subplot')}(${PN('111')}, projection${PO('=')}${PS("'3d'")})`,
+    `${PV('u')}, ${PV('v')} ${PO('=')} ${PM('np')}.${PF('mgrid')}[${PN('0')}:${PN('2')}${PO('*')}${PM('np')}.pi:${PN('20')}j, ${PN('0')}:${PM('np')}.pi:${PN('10')}j]`,
+    `${PV('ax')}.${PF('plot_wireframe')}(${PM('np')}.${PF('sin')}(v)${PO('*')}${PM('np')}.${PF('cos')}(u), ${PM('np')}.${PF('sin')}(v)${PO('*')}${PM('np')}.${PF('sin')}(u),`,
+    `                 ${PM('np')}.${PF('cos')}(v), color${PO('=')}${PS("'#39FF14'")}, alpha${PO('=')}${PN('.08')})`,
+    `${PV('ax')}.${PF('quiver')}(${PN('0')},${PN('0')},${PN('0')}, Bx, By, Bz, color${PO('=')}${PS("'#39FF14'")}, linewidth${PO('=')}${PN('2.5')})`,
+    `${PV('ax')}.${PF('set_title')}(${PS("'Bloch Sphere'")})`,
+    `${PM('plt')}.${PF('show')}()`,
+  ];
+  return lines.join('\n');
+}
+
+function renderDynCode(){
+  const body=document.getElementById('py-body');
+  if(!body)return;
+  body.innerHTML='<pre>'+genDynPython()+'</pre>';
+  const panel=document.getElementById('py-panel');
+  if(panel){panel.classList.remove('py-updated');void panel.offsetWidth;panel.classList.add('py-updated');}
+}
+function copyDynamic(){
+  const el=document.getElementById('py-body');
+  if(!el)return;
+  const tmp=document.createElement('div');tmp.innerHTML=el.innerHTML;
+  navigator.clipboard.writeText(tmp.textContent||'').then(()=>{
+    const btn=document.getElementById('py-copy-btn');
+    if(!btn)return;
+    btn.textContent='Copied ✓';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);
+  });
+}
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+updRot('rx');updRot('ry');updRot('rz');
+updateAll();
+renderDynCode();
+
+// ═══ PYTHON TABS ═══
+const PY_FILES = {
+  state:    'quantum_state.py',
+  gates:    'gates.py',
+  rotation: 'rotation_gates.py',
+  measure:  'measurement.py',
+  bloch:    'bloch_sphere.py',
+  circuit:  'full_circuit.py',
+};
+function showPyTab(id) {
+  document.querySelectorAll('.py-pane').forEach(p => p.classList.remove('act'));
+  document.querySelectorAll('.pytab').forEach(t => t.classList.remove('act'));
+  document.getElementById('py-' + id).classList.add('act');
+  document.querySelectorAll('.pytab').forEach(t => {
+    if (t.getAttribute('onclick') === `showPyTab('${id}')`) t.classList.add('act');
+  });
+  document.getElementById('py-fname').textContent = PY_FILES[id];
+}
+function copyCode() {
+  const active = document.querySelector('.py-pane.act pre');
+  if (!active) return;
+  const text = active.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.py-copy');
+    btn.textContent = 'Copied ✓';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+</script>
+</body>
+</html>

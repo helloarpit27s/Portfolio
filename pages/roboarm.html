@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROBO·ARM — Live Applications Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;500;600;700&family=JetBrains+Mono:wght@300;400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root{
+  --b:#000;--b1:#020802;--b2:#040c04;--b3:#060f06;
+  --ng:#00ff41;--ng1:#00cc33;--ng2:#008822;--ng3:#004411;--ng4:#001a06;
+  --cy:#00e5ff;--cy4:#001a22;
+  --or:#ff7b00;--or4:#1a0c00;
+  --pu:#c653ff;--pu4:#16001f;
+  --ye:#ffd60a;--ye4:#1a1400;
+  --pi:#ff2d78;--pi4:#1a0010;
+  --li:#aaff00;--li4:#0d1a00;
+  --tx:#a0ffb0;--tx2:#4a7a55;--tx3:#1e3a22;
+  --gng:0 0 6px #00ff41,0 0 22px #00ff4155;
+  --f1:'JetBrains Mono',monospace;
+  --f2:'Rajdhani',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--b);color:var(--tx);font-family:var(--f1);overflow-x:hidden;cursor:crosshair}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,65,.008) 3px,rgba(0,255,65,.008) 4px);pointer-events:none;z-index:9999}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--b1)}::-webkit-scrollbar-thumb{background:var(--ng3)}
+
+/* ═══ HEADER ═══ */
+#hdr{position:relative;padding:56px 28px 34px;text-align:center;overflow:hidden;border-bottom:1px solid #00ff4115;background:radial-gradient(ellipse 90% 70% at 50% -5%,#00ff4109,transparent 65%)}
+#hdr::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='48' height='48' viewBox='0 0 48 48' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%2300ff41' stroke-width='.25' opacity='.06' fill='none'%3E%3Cpath d='M0 24h48M24 0v48'/%3E%3C/g%3E%3C/svg%3E") repeat;pointer-events:none}
+.htag{font-size:9px;letter-spacing:8px;color:var(--ng2);text-transform:uppercase;margin-bottom:14px}
+.htitle{font-family:var(--f2);font-size:clamp(42px,8.5vw,100px);font-weight:700;line-height:.88;color:var(--ng);letter-spacing:3px;text-shadow:var(--gng);animation:flicker 9s infinite}
+.htitle em{color:#fff;font-style:normal;text-shadow:0 0 35px #fff4}
+.hsub{margin-top:12px;font-size:10px;letter-spacing:4px;color:var(--tx2)}
+.hpills{display:flex;justify-content:center;gap:22px;margin-top:20px;flex-wrap:wrap}
+.pill{display:flex;align-items:center;gap:7px;font-size:9px;letter-spacing:2px;color:var(--tx2)}
+.pill i{width:7px;height:7px;border-radius:50%;animation:blink 2.5s ease-in-out infinite}
+.logo{font-family:var(--mono);font-size:16px;color:var(--green);text-underline-offset: var(--bg);}
+.logo span{color:var(--tmid);}
+.logo:hover{color:var(--green);cursor:pointer;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.18}}
+@keyframes flicker{0%,93%,95%,100%{opacity:1}94%{opacity:.72}}
+
+/* ═══ NAV ═══ */
+nav{display:flex;justify-content:center;flex-wrap:wrap;background:rgba(2,8,2,.92);border-bottom:1px solid #00ff4115;position:sticky;top:0;z-index:500;backdrop-filter:blur(10px);-webkit-backdrop-filter: blur(10px);}
+nav a{padding:11px 18px;color:var(--tx2);text-decoration:none;font-family:var(--f2);font-size:12px;letter-spacing:2px;font-weight:600;text-transform:uppercase;transition:all .2s;border-bottom:2px solid transparent}
+nav a:hover{color:var(--ng);border-bottom-color:var(--ng);text-shadow:var(--gng)}
+
+/* ═══ SECTIONS ═══ */
+.sec{padding:48px 24px;max-width:1480px;margin:0 auto}
+.sec+.sec{border-top:1px solid #00ff410e}
+.sh{display:flex;align-items:center;gap:12px;margin-bottom:26px}
+.sn{font-size:9px;letter-spacing:3px;color:var(--ng2);padding:2px 7px;border:1px solid #00ff4118}
+.sh h2{font-family:var(--f2);font-size:clamp(15px,3vw,24px);font-weight:700;color:var(--ng);letter-spacing:3px;text-transform:uppercase;text-shadow:var(--gng)}
+.sr{flex:1;height:1px;background:linear-gradient(90deg,#00ff4120,transparent)}
+.stag{font-size:9px;letter-spacing:2px;color:var(--tx3);padding:2px 7px;border:1px solid #00ff410c}
+
+/* ═══ CARDS ═══ */
+.card{background:var(--b1);border:1px solid #ffffff0c;border-radius:3px;padding:16px}
+.ct{font-size:8px;letter-spacing:4px;color:var(--ng2);text-transform:uppercase;margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid #00ff4110}
+
+/* ═══ BUTTONS ═══ */
+.btn{padding:8px 14px;background:transparent;border:1px solid var(--ng2);color:var(--ng);font-family:var(--f1);font-size:9px;letter-spacing:2px;cursor:pointer;transition:all .2s;text-transform:uppercase;border-radius:2px}
+.btn:hover{background:var(--ng4);border-color:var(--ng);box-shadow:var(--gng);text-shadow:var(--gng)}
+.btn.on{background:var(--ng4);border-color:var(--ng);box-shadow:var(--gng)}
+.rst{border-color:#ff3333!important;color:#ff5533!important}
+.rst:hover{background:#150000!important;border-color:#ff3333!important;box-shadow:0 0 14px #ff333355!important;text-shadow:0 0 8px #ff3333!important}
+
+/* ═══ SLIDERS ═══ */
+.sg{margin-bottom:11px}
+.sr2{display:flex;justify-content:space-between;font-size:9px;margin-bottom:4px}
+.sl{color:var(--tx2)}.sv{color:var(--ng);font-weight:700;min-width:36px;text-align:right}
+input[type=range]{width:100%;-webkit-appearance:none;height:2px;background:transparent;outline:none;cursor:pointer;background-image:linear-gradient(var(--ng),var(--ng));background-size:var(--p,50%) 100%;background-repeat:no-repeat;border-bottom:2px solid var(--b3)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--ng);border-radius:50%;box-shadow:var(--gng);transition:transform .1s;cursor:pointer}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.5)}
+
+/* ═══ SIMULATION VIEWPORT ═══ */
+.sim-grid{display:grid;grid-template-columns:1fr 285px;gap:16px}
+@media(max-width:860px){.sim-grid{grid-template-columns:1fr}}
+
+#vpPlaceholder{
+  position:relative;background:var(--b2);border:1px solid #00ff4118;
+  border-radius:3px;min-height:510px;overflow:hidden;
+}
+.vpc{position:absolute;width:13px;height:13px}
+.vpc.tl{top:0;left:0;border-top:2px solid var(--ng);border-left:2px solid var(--ng)}
+.vpc.tr{top:0;right:0;border-top:2px solid var(--ng);border-right:2px solid var(--ng)}
+.vpc.bl{bottom:0;left:0;border-bottom:2px solid var(--ng);border-left:2px solid var(--ng)}
+.vpc.br{bottom:0;right:0;border-bottom:2px solid var(--ng);border-right:2px solid var(--ng)}
+.vplbl{position:absolute;top:9px;left:12px;font-size:8px;letter-spacing:3px;color:var(--tx3);z-index:2;pointer-events:none}
+.vpfps{position:absolute;top:9px;right:12px;font-size:8px;color:var(--tx3);z-index:2;pointer-events:none}
+.vpee{position:absolute;bottom:10px;right:12px;font-size:9px;line-height:1.85;text-align:right;color:var(--ng);z-index:2;pointer-events:none}
+.vphi{position:absolute;bottom:10px;left:12px;font-size:8px;color:var(--tx3);letter-spacing:1px;z-index:2;pointer-events:none;line-height:1.8}
+
+/* ═══ FLOATING MINI CANVAS ═══ */
+#cvWrap{
+  position:fixed;z-index:400;
+  transition:width .5s cubic-bezier(.22,.68,0,1.2),
+             height .5s cubic-bezier(.22,.68,0,1.2),
+             right .5s cubic-bezier(.22,.68,0,1.2),
+             bottom .5s cubic-bezier(.22,.68,0,1.2),
+             border-radius .4s ease,
+             box-shadow .4s ease,
+             opacity .3s ease;
+  overflow:hidden;
+}
+#cvWrap.isMini{
+  right:18px!important;bottom:18px!important;
+  left:auto!important;top:auto!important;
+  width:260px!important;height:174px!important;
+  border:1px solid var(--ng);
+  border-radius:5px;
+  box-shadow:0 0 28px #00ff4150,0 12px 40px #00000099;
+  cursor:pointer;
+}
+#cvWrap.isMini:hover{box-shadow:0 0 40px #00ff4180,0 12px 40px #000000bb}
+#miniUI{
+  display:none;position:absolute;inset:0;pointer-events:none;z-index:10;
+  background:linear-gradient(to bottom,rgba(0,0,0,.6) 0%,transparent 40%,transparent 65%,rgba(0,0,0,.7) 100%);
+}
+#cvWrap.isMini #miniUI{display:block}
+#miniUI .m-live{position:absolute;top:7px;left:9px;font-size:8px;color:var(--ng);letter-spacing:2px;font-family:var(--f1);text-shadow:var(--gng);animation:blink 1.5s infinite}
+#miniUI .m-task{position:absolute;top:7px;right:9px;font-size:7px;color:var(--or);letter-spacing:1.5px;font-family:var(--f1);text-shadow:0 0 8px var(--or);max-width:120px;text-align:right;line-height:1.4}
+#miniUI .m-hint{position:absolute;bottom:7px;left:0;right:0;text-align:center;font-size:7px;color:var(--tx2);letter-spacing:1.5px;font-family:var(--f1)}
+#c3d {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ═══ CTRL COLUMN ═══ */
+.ctrl-col{display:flex;flex-direction:column;gap:12px}
+.mode-row{display:flex;gap:3px;margin-bottom:3px}
+.mode-row .btn{flex:1;padding:6px 3px;font-size:8px;letter-spacing:1px}
+.jbars{display:flex;flex-direction:column;gap:6px}
+.jb{display:flex;align-items:center;gap:6px;font-size:8px}
+.jbn{width:48px;color:var(--tx2);font-size:7.5px}
+.jbt{flex:1;height:3px;background:var(--b3);overflow:hidden}
+.jbf{height:100%;background:var(--ng);box-shadow:0 0 5px var(--ng);transition:width .25s}
+.jbv{width:32px;text-align:right;color:var(--ng);font-size:7.5px}
+
+/* ═══ APPS SECTION ═══ */
+.apps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:20px}
+@media(max-width:900px){.apps-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.apps-grid{grid-template-columns:1fr}}
+
+.acard{
+  position:relative;background:var(--b1);border:1px solid #1a1a1a;
+  border-radius:4px;padding:20px 18px 16px;cursor:pointer;overflow:hidden;
+  transition:border-color .25s,box-shadow .25s,transform .2s,background .2s;
+}
+.acard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--ng));opacity:.7;transition:opacity .2s}
+.acard::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% -10%,color-mix(in srgb,var(--ac,var(--ng)) 8%,transparent),transparent 70%);pointer-events:none}
+.acard:hover{border-color:var(--ac,var(--ng));box-shadow:0 0 20px color-mix(in srgb,var(--ac,var(--ng)) 25%,transparent),inset 0 0 30px color-mix(in srgb,var(--ac,var(--ng)) 4%,transparent);transform:translateY(-2px);background:var(--b2)}
+.acard.running{border-color:var(--ac,var(--ng));box-shadow:0 0 28px color-mix(in srgb,var(--ac,var(--ng)) 40%,transparent);background:var(--b2)}
+.acard.running::before{opacity:1;animation:topbar 1s ease-in-out infinite alternate}
+@keyframes topbar{from{box-shadow:0 0 8px var(--ac,var(--ng))}to{box-shadow:0 0 20px var(--ac,var(--ng))}}
+.a-icon{font-size:30px;margin-bottom:10px;display:block;filter:drop-shadow(0 0 8px var(--ac,var(--ng)))}
+.a-name{font-family:var(--f2);font-size:15px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--ac,var(--ng));margin-bottom:6px;text-shadow:0 0 10px var(--ac,var(--ng))}
+.a-desc{font-size:9px;color:var(--tx2);line-height:1.85;letter-spacing:.4px;margin-bottom:14px}
+.a-btns{display:flex;gap:6px;flex-wrap:wrap}
+.a-run{padding:6px 14px;background:transparent;border:1px solid var(--ac,var(--ng));color:var(--ac,var(--ng));font-family:var(--f1);font-size:8px;letter-spacing:2px;cursor:pointer;transition:all .2s;text-transform:uppercase;border-radius:2px}
+.a-run:hover{background:color-mix(in srgb,var(--ac,var(--ng)) 15%,transparent);box-shadow:0 0 12px var(--ac,var(--ng));text-shadow:0 0 6px var(--ac,var(--ng))}
+.a-stop{padding:6px 10px;background:transparent;border:1px solid #ff333355;color:#ff5533;font-family:var(--f1);font-size:8px;letter-spacing:2px;cursor:pointer;transition:all .2s;text-transform:uppercase;display:none;border-radius:2px}
+.a-stop:hover{background:#1a000088;border-color:#ff3333}
+.a-badge{position:absolute;top:11px;right:11px;font-size:7px;letter-spacing:2px;padding:2px 7px;border:1px solid var(--ac,var(--ng));color:var(--ac,var(--ng));display:none}
+.acard.running .a-badge{display:block;animation:blink 1s infinite}
+.a-prog{position:absolute;bottom:0;left:0;height:2px;background:var(--ac,var(--ng));box-shadow:0 0 6px var(--ac,var(--ng));transition:width .4s linear;width:0}
+
+/* status panel */
+#sPanel{background:var(--b2);border:1px solid #00ff4112;border-radius:4px;padding:20px;display:none;gap:20px;grid-template-columns:1fr 250px}
+#sPanel.show{display:grid}
+@media(max-width:700px){#sPanel{grid-template-columns:1fr}}
+.sp-name{font-family:var(--f2);font-size:17px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px}
+.sp-ptrack{width:100%;height:5px;background:var(--b3);border-radius:2px;overflow:hidden;margin-bottom:9px}
+.sp-pbar{height:100%;border-radius:2px;transition:width .5s ease}
+.sp-step{font-size:9px;color:var(--tx2);letter-spacing:.5px;margin-bottom:10px}
+.sp-note{font-size:10px;padding:9px 12px;border-left:2px solid var(--ng);background:var(--ng4);line-height:1.75;margin-bottom:0}
+.sp-log{font-size:8.5px;line-height:2.1;max-height:140px;overflow-y:auto}
+.sp-log .le{display:block;padding-left:10px;border-left:1px solid #00ff4115;color:var(--tx2)}
+.sp-log .le.done{color:var(--ng2)}
+.sp-log .le.cur{color:var(--tx);border-left-color:var(--ng)}
+
+/* ═══ IK SECTION ═══ */
+.ik-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.ik-grid{grid-template-columns:1fr}}
+.ik-wrap{background:var(--b1);border:1px solid #00ff4115;border-radius:3px;overflow:hidden;position:relative}
+#cik{display:block;cursor:crosshair;width:100%;height:auto}
+.ik-foot{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:8px;color:var(--tx3);letter-spacing:2px;pointer-events:none}
+.ro-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+.ro{background:var(--b2);border:1px solid #00ff4110;border-radius:3px;padding:9px 11px}
+.ro-l{font-size:7px;letter-spacing:2.5px;color:var(--tx3);text-transform:uppercase;margin-bottom:3px}
+.ro-v{font-family:var(--f2);font-size:20px;font-weight:700;color:var(--ng);text-shadow:var(--gng)}
+.fml-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+.fml{background:var(--b2);border:1px solid #00ff4110;border-radius:3px;padding:9px;text-align:center}
+.fml-l{font-size:7px;letter-spacing:2px;color:var(--tx3);text-transform:uppercase;margin-bottom:5px}
+.fml-e{font-size:10px;color:var(--ng);text-shadow:var(--gng);line-height:1.6}
+.mathblk{background:var(--b2);border:1px solid #00ff4110;border-left:2px solid var(--cy);border-radius:3px;padding:13px 15px;font-size:11px;line-height:1.9}
+/* ═══ CODE SYNTAX HIGHLIGHTING (VS Code Dark) ═══ */
+.kw { color: #569cd6; } /* Keywords: Soft Blue */
+.fn { color: #dcdcaa; text-shadow: none; } /* Functions: Soft Yellow */
+.cm { color: #4e514c; font-style: italic; } /* Comments: grey */
+.st { color: #ce9178; } /* Strings: Terracotta/Orange */
+.nm { color: #b5cea8; } /* Numbers: Pale Green */
+.pp { color: #c586c0; } /* Preprocessor: Magenta */
+.ty { color: #4ec9b0; } /* Types: Teal */
+
+/* ═══ ARDUINO ═══ */
+.ard-grid{display:grid;grid-template-columns:1fr 290px;gap:16px}
+@media(max-width:960px){.ard-grid{grid-template-columns:1fr}}
+.ard-wrap{background:var(--b1);border:1px solid #00ff4115;border-radius:3px;overflow:hidden;padding:20px;display:flex;align-items:center;justify-content:center}
+.servo-g{cursor:pointer;transition:opacity .2s}
+.servo-g:hover{opacity:.75}
+.pi-item{display:flex;gap:9px;background:var(--b2);border:1px solid #00ff410c;border-radius:3px;padding:9px 11px;cursor:pointer;transition:all .2s;margin-bottom:7px}
+.pi-item:hover{border-color:var(--ng);background:var(--ng4)}
+.pi-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px;box-shadow:0 0 6px currentColor}
+.pi-text strong{display:block;font-size:10px;color:var(--ng);margin-bottom:2px}
+.pi-text span{font-size:8px;color:var(--tx2);line-height:1.6}
+
+/* ═══ CODE ═══ */
+.tab-row{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:-1px}
+.tb{padding:8px 16px;background:var(--b2);border:1px solid #00ff4115;border-bottom:none;color:var(--tx2);font-family:var(--f2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;transition:all .2s;text-transform:uppercase}
+.tb.on{background:var(--b1);border-color:var(--ng1);color:var(--ng);margin-bottom:-1px;text-shadow:var(--gng)}
+.cw{display:none;background:var(--b1);border:1px solid var(--ng2);border-radius:0 3px 3px 3px;padding:18px;overflow-x:auto}
+.cw.on{display:block}
+.cw-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #00ff4110}
+.cfn{font-size:9px;color:var(--tx2);letter-spacing:2px}
+.cpb{padding:3px 9px;background:transparent;border:1px solid #00ff4115;color:var(--tx2);font-family:var(--f1);font-size:8px;cursor:pointer;transition:all .2s;letter-spacing:1px}
+.cpb:hover{border-color:var(--ng);color:var(--ng)}
+pre{font-family:var(--f1);font-size:11px;line-height:1.85;overflow-x:auto;tab-size:2;white-space:pre}
+
+/* ═══ TOOLTIP ═══ */
+#tip{position:fixed;background:var(--b1);border:1px solid var(--ng);color:var(--ng);font-family:var(--f1);font-size:9px;padding:7px 11px;z-index:1000;box-shadow:var(--gng);display:none;pointer-events:none;line-height:1.7;border-radius:3px;max-width:220px}
+footer{border-top:1px solid #00ff4110;padding:22px;text-align:center;font-size:9px;color:var(--tx3);letter-spacing:3px}
+footer span{color:var(--ng)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header id="hdr">
+    <div class="logo" onclick="window.location.href='../index.html'">A/ <span>robo.arm</span></div>
+  <div class="htag">// robotics simulation & applications lab // v4.0 //</div>
+  <h1 class="htitle">ROBO·<em>ARM</em></h1>
+  <div class="hsub">// 5-DOF ARM · 3D SIMULATION · 6 LIVE APPLICATIONS · INVERSE KINEMATICS · ARDUINO //</div>
+  <div class="hpills">
+    <div class="pill"><i style="background:var(--ng)"></i>3D LIVE ENGINE</div>
+    <div class="pill"><i style="background:var(--cy);animation-delay:.7s"></i>IK SOLVER</div>
+    <div class="pill"><i style="background:var(--or);animation-delay:1.4s"></i>6 APPS READY</div>
+    <div class="pill"><i style="background:var(--pu);animation-delay:2.1s"></i>ARDUINO SIM</div>
+    <div class="pill"><i style="background:var(--pi);animation-delay:2.8s"></i>STICKY VIEWPORT</div>
+  </div>
+</header>
+
+<nav>
+  <a href="#sim">▸ SIMULATION</a>
+  <a href="#apps">▸ APPLICATIONS</a>
+  <a href="#ik">▸ IK THEORY</a>
+  <a href="#ard">▸ ARDUINO</a>
+  <a href="#code">▸ CODE</a>
+</nav>
+
+<div id="tip"></div>
+
+<!-- FLOATING CANVAS (always fixed, overlays placeholder or goes mini) -->
+<div id="cvWrap">
+  <canvas id="c3d"></canvas>
+  <div id="miniUI">
+    <div class="m-live">● LIVE</div>
+    <div class="m-task" id="miniTask"></div>
+    <div class="m-hint">↑ click to expand</div>
+  </div>
+</div>
+
+<!-- ══════════════ §1 SIMULATION ══════════════ -->
+<section class="sec" id="sim">
+  <div class="sh"><div class="sn">01</div><h2>3D Simulation</h2><div class="sr"></div><div class="stag">WEBGL · DRAG · SCROLL</div></div>
+  <div class="sim-grid">
+    <div id="vpPlaceholder">
+      <div class="vpc tl"></div><div class="vpc tr"></div><div class="vpc bl"></div><div class="vpc br"></div>
+      <div class="vplbl">3D VIEWPORT · WebGL · Five-DOF Arm</div>
+      <div class="vpfps" id="fps">— FPS</div>
+      <div class="vphi">DRAG · ORBIT &nbsp;|&nbsp; SCROLL · ZOOM &nbsp;|&nbsp; CONTROLS →</div>
+      <div class="vpee" id="ee">X: —<br>Y: —<br>Z: —<br><span style="font-size:7px;color:var(--tx3)">END·EFFECTOR mm</span></div>
+    </div>
+    <div class="ctrl-col">
+      <div class="card">
+        <div class="ct">// Control Mode</div>
+        <div class="mode-row">
+          <button class="btn on" id="bManual" onclick="setMode('manual')">MANUAL</button>
+          <button class="btn" id="bIK" onclick="setMode('ik')">IK</button>
+          <button class="btn" id="bAnim" onclick="setMode('anim')">ANIMATE</button>
+        </div>
+        
+        <div id="dManual" style="margin-top:8px">
+          <div class="sg"><div class="sr2"><span class="sl">BASE ROT.</span><span class="sv" id="lv0">0°</span></div><input type="range" id="s0" min="-180" max="180" value="0" aria-label="Base Rotation" title="Base Rotation" /></div>
+          <div class="sg"><div class="sr2"><span class="sl">SHOULDER</span><span class="sv" id="lv1">0°</span></div><input type="range" id="s1" min="-80" max="80" value="0" aria-label="Shoulder" title="Shoulder" /></div>
+          <div class="sg"><div class="sr2"><span class="sl">ELBOW</span><span class="sv" id="lv2">0°</span></div><input type="range" id="s2" min="-120" max="120" value="0" aria-label="Elbow" title="Elbow" /></div>
+          <div class="sg"><div class="sr2"><span class="sl">WRIST PITCH</span><span class="sv" id="lv3">0°</span></div><input type="range" id="s3" min="-90" max="90" value="0" aria-label="Wrist Pitch" title="Wrist Pitch" /></div>
+          <div class="sg"><div class="sr2"><span class="sl">WRIST ROLL</span><span class="sv" id="lv4">0°</span></div><input type="range" id="s4" min="-180" max="180" value="0" aria-label="Wrist Roll" title="Wrist Roll" /></div>
+        </div>
+        
+        <div id="dIK" style="display:none;margin-top:8px">
+          <div class="sg"><div class="sr2"><span class="sl">TARGET X mm</span><span class="sv" id="lIx">150</span></div><input type="range" id="sIx" min="-230" max="230" value="150" aria-label="Target X" title="Target X" /></div>
+          <div class="sg"><div class="sr2"><span class="sl">TARGET Y mm</span><span class="sv" id="lIy">100</span></div><input type="range" id="sIy" min="-20" max="300" value="100" aria-label="Target Y" title="Target Y" /></div>
+          <div class="sg"><div class="sr2"><span class="sl">TARGET Z mm</span><span class="sv" id="lIz">0</span></div><input type="range" id="sIz" min="-230" max="230" value="0" aria-label="Target Z" title="Target Z" /></div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="ct">// Gripper & Speed</div>
+        <div class="sg"><div class="sr2"><span class="sl">GRIPPER OPEN</span><span class="sv" id="lG">50%</span></div><input type="range" id="sG" min="0" max="100" value="50" aria-label="Gripper Open" title="Gripper Open" /></div>
+        <div class="sg"><div class="sr2"><span class="sl">MOVE SPEED</span><span class="sv" id="lS">1.0×</span></div><input type="range" id="sS" min="1" max="60" value="10" aria-label="Move Speed" title="Move Speed" /></div>
+      </div>
+      <div class="card">
+        <div class="ct">// Presets</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+          <button class="btn" onclick="preset('home')">HOME</button>
+          <button class="btn" onclick="preset('pick')">PICK</button>
+          <button class="btn" onclick="preset('place')">PLACE</button>
+          <button class="btn" onclick="preset('wave')">WAVE</button>
+          <button class="btn" onclick="preset('reach')">REACH</button>
+          <button class="btn rst" onclick="resetAll()">⟳ RESET</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct">// Joint Status</div>
+        <div class="jbars">
+          <div class="jb"><span class="jbn">J1 BASE</span><div class="jbt"><div class="jbf" id="jf0" style="width:50%"></div></div><span class="jbv" id="jv0">0°</span></div>
+          <div class="jb"><span class="jbn">J2 SHLDR</span><div class="jbt"><div class="jbf" id="jf1" style="width:50%"></div></div><span class="jbv" id="jv1">0°</span></div>
+          <div class="jb"><span class="jbn">J3 ELBOW</span><div class="jbt"><div class="jbf" id="jf2" style="width:50%"></div></div><span class="jbv" id="jv2">0°</span></div>
+          <div class="jb"><span class="jbn">J4 WR-P</span><div class="jbt"><div class="jbf" id="jf3" style="width:50%"></div></div><span class="jbv" id="jv3">0°</span></div>
+          <div class="jb"><span class="jbn">J5 WR-R</span><div class="jbt"><div class="jbf" id="jf4" style="width:50%"></div></div><span class="jbv" id="jv4">0°</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ §2 APPLICATIONS ══════════════ -->
+<section class="sec" id="apps">
+  <div class="sh"><div class="sn">02</div><h2>Applications</h2><div class="sr"></div><div class="stag">RUN · WATCH LIVE IN CORNER</div></div>
+  <div class="apps-grid" id="appGrid"></div>
+  <div id="sPanel">
+    <div>
+      <div class="sp-name" id="spName">—</div>
+      <div class="sp-ptrack"><div class="sp-pbar" id="spBar" style="width:0%"></div></div>
+      <div class="sp-step" id="spStep">Step — / —</div>
+      <div class="sp-note" id="spNote">Idle…</div>
+    </div>
+    <div>
+      <div class="ct">// Task Log</div>
+      <div class="sp-log" id="spLog"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ §3 INVERSE KINEMATICS ══════════════ -->
+<section class="sec" id="ik">
+  <div class="sh"><div class="sn">03</div><h2>Inverse Kinematics</h2><div class="sr"></div><div class="stag">CLICK OR DRAG CANVAS</div></div>
+  <div class="ik-grid">
+    <div class="ik-wrap"><canvas id="cik" width="560" height="400"></canvas><div class="ik-foot">// DRAG TARGET · 2D GEOMETRIC VISUALIZATION //</div></div>
+    <div>
+      <div class="ro-grid">
+        <div class="ro"><div class="ro-l">θ₁ Shoulder</div><div class="ro-v" id="rt1">0.0°</div></div>
+        <div class="ro"><div class="ro-l">θ₂ Elbow</div><div class="ro-v" id="rt2">0.0°</div></div>
+        <div class="ro"><div class="ro-l">Target X</div><div class="ro-v" id="rtx">180</div></div>
+        <div class="ro"><div class="ro-l">Target Y</div><div class="ro-v" id="rty">60</div></div>
+        <div class="ro"><div class="ro-l">Reach</div><div class="ro-v" id="rrch">82%</div></div>
+        <div class="ro"><div class="ro-l">Status</div><div class="ro-v" id="rstatus" style="font-size:12px">SOLVED</div></div>
+      </div>
+      <div class="fml-grid">
+        <div class="fml"><div class="fml-l">Cosine Rule (θ₂)</div><div class="fml-e">cosθ₂=(r²−L₁²−L₂²)/2L₁L₂</div></div>
+        <div class="fml"><div class="fml-l">Shoulder (θ₁)</div><div class="fml-e">θ₁=atan2(y,x)−atan2(k₂,k₁)</div></div>
+        <div class="fml"><div class="fml-l">Distance</div><div class="fml-e">r = √(x² + y²)</div></div>
+        <div class="fml"><div class="fml-l">Jacobian</div><div class="fml-e">Δθ=Jᵀ·Δx/(|JᵀJ|+λ²I)</div></div>
+      </div>
+      <div class="mathblk">
+<span class="pp">// Closed-form 2-DOF Geometric IK</span>
+<span class="kw">function</span> <span class="fn">solveIK</span>(x, y, L1, L2) {
+  <span class="kw">const</span> r = <span class="fn">Math.sqrt</span>(x*x + y*y);
+  <span class="kw">const</span> c2 = (r²−L1²−L2²) / (<span class="nm">2</span>*L1*L2);
+  <span class="kw">if</span> (|c2| &gt; <span class="nm">1</span>) <span class="kw">return null</span>; <span class="cm">// out of reach</span>
+  <span class="kw">const</span> θ₂ = <span class="fn">acos</span>(c2);        <span class="cm">// elbow-up</span>
+  <span class="kw">const</span> k1 = L1+L2*<span class="fn">cos</span>(θ₂), k2=L2*<span class="fn">sin</span>(θ₂);
+  <span class="kw">const</span> θ₁ = <span class="fn">atan2</span>(y,x)−<span class="fn">atan2</span>(k2,k1);
+  <span class="kw">return</span> {θ₁, θ₂}; <span class="cm">// radians → convert to °</span>
+}</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ §4 ARDUINO ══════════════ -->
+<section class="sec" id="ard">
+  <div class="sh"><div class="sn">04</div><h2>Arduino Wiring</h2><div class="sr"></div><div class="stag">HOVER COMPONENTS</div></div>
+  <div class="ard-grid">
+    <div class="ard-wrap">
+<svg viewBox="0 0 720 500" style="width:100%;max-width:680px;height:auto" xmlns="http://www.w3.org/2000/svg">
+<defs><filter id="fg"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect width="720" height="500" fill="#020802"/>
+<g opacity=".055" stroke="#00ff41" stroke-width=".4">
+<line x1="0" y1="50" x2="720" y2="50"/><line x1="0" y1="100" x2="720" y2="100"/><line x1="0" y1="150" x2="720" y2="150"/><line x1="0" y1="200" x2="720" y2="200"/><line x1="0" y1="250" x2="720" y2="250"/><line x1="0" y1="300" x2="720" y2="300"/><line x1="0" y1="350" x2="720" y2="350"/><line x1="0" y1="400" x2="720" y2="400"/><line x1="0" y1="450" x2="720" y2="450"/>
+<line x1="72" y1="0" x2="72" y2="500"/><line x1="144" y1="0" x2="144" y2="500"/><line x1="216" y1="0" x2="216" y2="500"/><line x1="288" y1="0" x2="288" y2="500"/><line x1="360" y1="0" x2="360" y2="500"/><line x1="432" y1="0" x2="432" y2="500"/><line x1="504" y1="0" x2="504" y2="500"/><line x1="576" y1="0" x2="576" y2="500"/><line x1="648" y1="0" x2="648" y2="500"/>
+</g>
+<rect x="258" y="108" width="204" height="284" rx="10" fill="#002808" stroke="#00ff41" stroke-width="1.8" filter="url(#fg)"/>
+<text x="360" y="133" text-anchor="middle" fill="#00ff41" font-size="11" font-family="'JetBrains Mono',monospace" filter="url(#fg)">ARDUINO UNO</text>
+<text x="360" y="147" text-anchor="middle" fill="#00aa22" font-size="8" font-family="'JetBrains Mono',monospace">ATmega328P · 16MHz</text>
+<rect x="304" y="196" width="68" height="46" rx="3" fill="#001404" stroke="#00ff4140" stroke-width="1"/>
+<text x="338" y="222" text-anchor="middle" fill="#00ff41" font-size="9" font-family="'JetBrains Mono',monospace">ATmega328P</text>
+<rect x="252" y="158" width="10" height="34" rx="2" fill="#001804" stroke="#00ff41" stroke-width="1"/>
+<text x="248" y="170" text-anchor="end" fill="#00ff41" font-size="7" font-family="'JetBrains Mono',monospace">USB</text>
+<circle cx="286" cy="158" r="5" fill="#ff3300" opacity=".9" filter="url(#fg)"/>
+<circle cx="300" cy="158" r="4" fill="#00ff41" opacity=".7" filter="url(#fg)"/>
+<circle cx="310" cy="158" r="4" fill="#0088ff" opacity=".7" filter="url(#fg)"/>
+<g font-size="7.5" font-family="'JetBrains Mono',monospace">
+<text x="464" y="174" fill="#00aa22">~9</text><text x="464" y="196" fill="#00aa22">~10</text>
+<text x="464" y="218" fill="#00aa22">~11</text><text x="464" y="240" fill="#00aa22">~12</text>
+<text x="464" y="262" fill="#00aa22">~13</text><text x="464" y="284" fill="#444">GND</text>
+<text x="464" y="306" fill="#00aa22">~3</text>
+</g>
+<g filter="url(#fg)">
+<circle cx="460" cy="170" r="3.5" fill="#00ff41"/><circle cx="460" cy="192" r="3.5" fill="#00ff41"/>
+<circle cx="460" cy="214" r="3.5" fill="#00ff41"/><circle cx="460" cy="236" r="3.5" fill="#00ff41"/>
+<circle cx="460" cy="258" r="3.5" fill="#00ff41"/><circle cx="460" cy="280" r="3.5" fill="#333"/>
+<circle cx="460" cy="302" r="3.5" fill="#00ff41"/>
+</g>
+<text x="252" y="346" text-anchor="end" fill="#00aa22" font-size="8" font-family="'JetBrains Mono',monospace">5V</text>
+<text x="252" y="364" text-anchor="end" fill="#444" font-size="7" font-family="'JetBrains Mono',monospace">GND</text>
+<circle cx="258" cy="342" r="3.5" fill="#ff6600" filter="url(#fg)"/>
+<circle cx="258" cy="360" r="3.5" fill="#333"/>
+<!-- Servo 1 BASE orange -->
+<g class="servo-g" data-tip="SERVO 1 — BASE ROTATION&#10;Signal: Pin ~9 (PWM 50Hz)&#10;Power: External 5V/3A PSU&#10;Pulse: 500–2500µs · Range: 0–180°">
+<rect x="14" y="344" width="80" height="50" rx="5" fill="#100800" stroke="#ff7b00" stroke-width="1.5"/>
+<circle cx="80" cy="369" r="13" fill="#080400" stroke="#ff7b00" stroke-width="1.5"/>
+<circle cx="80" cy="369" r="5" fill="#ff7b00"/>
+<text x="46" y="387" text-anchor="middle" fill="#ff7b00" font-size="7" font-family="'JetBrains Mono',monospace">S1 BASE ~9</text>
+</g>
+<!-- Servo 2 SHOULDER cyan -->
+<g class="servo-g" data-tip="SERVO 2 — SHOULDER&#10;Signal: Pin ~10 (PWM 50Hz)&#10;Power: External 5V/3A PSU&#10;Pulse: 500–2500µs · Range: 0–180°">
+<rect x="14" y="218" width="80" height="50" rx="5" fill="#000810" stroke="#00e5ff" stroke-width="1.5"/>
+<circle cx="80" cy="243" r="13" fill="#000508" stroke="#00e5ff" stroke-width="1.5"/>
+<circle cx="80" cy="243" r="5" fill="#00e5ff"/>
+<text x="46" y="261" text-anchor="middle" fill="#00e5ff" font-size="7" font-family="'JetBrains Mono',monospace">S2 SHLDR ~10</text>
+</g>
+<!-- Servo 3 ELBOW green -->
+<g class="servo-g" data-tip="SERVO 3 — ELBOW&#10;Signal: Pin ~11 (PWM · Timer2)&#10;Power: External 5V/3A PSU&#10;Pulse: 500–2500µs · Range: 0–180°">
+<rect x="624" y="112" width="80" height="50" rx="5" fill="#001a06" stroke="#00ff41" stroke-width="1.5"/>
+<circle cx="628" cy="137" r="13" fill="#001006" stroke="#00ff41" stroke-width="1.5"/>
+<circle cx="628" cy="137" r="5" fill="#00ff41" filter="url(#fg)"/>
+<text x="664" y="155" text-anchor="middle" fill="#00ff41" font-size="7" font-family="'JetBrains Mono',monospace">S3 ELBOW ~11</text>
+</g>
+<!-- Servo 4 WRIST-P purple -->
+<g class="servo-g" data-tip="SERVO 4 — WRIST PITCH&#10;Signal: Pin ~12 (PWM)&#10;Power: External 5V/3A PSU&#10;Calibrate neutral at 1500µs">
+<rect x="624" y="215" width="80" height="50" rx="5" fill="#140010" stroke="#c653ff" stroke-width="1.5"/>
+<circle cx="628" cy="240" r="13" fill="#0e000e" stroke="#c653ff" stroke-width="1.5"/>
+<circle cx="628" cy="240" r="5" fill="#c653ff"/>
+<text x="664" y="258" text-anchor="middle" fill="#c653ff" font-size="7" font-family="'JetBrains Mono',monospace">S4 WR-P ~12</text>
+</g>
+<!-- Servo 5 WRIST-R yellow -->
+<g class="servo-g" data-tip="SERVO 5 — WRIST ROLL&#10;Signal: Pin ~13 (PWM)&#10;Power: External 5V/3A PSU&#10;Note: onboard LED on ~13 flickers">
+<rect x="624" y="318" width="80" height="50" rx="5" fill="#0d0d00" stroke="#ffd60a" stroke-width="1.5"/>
+<circle cx="628" cy="343" r="13" fill="#080800" stroke="#ffd60a" stroke-width="1.5"/>
+<circle cx="628" cy="343" r="5" fill="#ffd60a"/>
+<text x="664" y="361" text-anchor="middle" fill="#ffd60a" font-size="7" font-family="'JetBrains Mono',monospace">S5 WR-R ~13</text>
+</g>
+<!-- Servo 6 GRIPPER pink -->
+<g class="servo-g" data-tip="SERVO 6 — GRIPPER&#10;Signal: Pin ~3 (PWM · Timer2)&#10;Power: Board 5V OK (light load)&#10;Range: 0–90° · 9g micro servo">
+<rect x="14" y="108" width="80" height="50" rx="5" fill="#0d0006" stroke="#ff2d78" stroke-width="1.5"/>
+<circle cx="80" cy="133" r="13" fill="#080005" stroke="#ff2d78" stroke-width="1.5"/>
+<circle cx="80" cy="133" r="5" fill="#ff2d78"/>
+<text x="46" y="151" text-anchor="middle" fill="#ff2d78" font-size="7" font-family="'JetBrains Mono',monospace">S6 GRIP ~3</text>
+</g>
+<!-- PSU -->
+<rect x="290" y="425" width="140" height="44" rx="4" fill="#0d0000" stroke="#ff6600" stroke-width="1.5"/>
+<text x="360" y="444" text-anchor="middle" fill="#ff6600" font-size="9" font-family="'JetBrains Mono',monospace">5V / 3A PSU</text>
+<text x="360" y="457" text-anchor="middle" fill="#ff9900" font-size="7" font-family="'JetBrains Mono',monospace">External · powers S1–S5</text>
+<!-- WIRES signal -->
+<polyline points="94,360 165,360 165,170 460,170" fill="none" stroke="#ff7b00" stroke-width="1.8" stroke-dasharray="5,3" opacity=".9"/>
+<polyline points="94,233 168,233 168,192 460,192" fill="none" stroke="#00e5ff" stroke-width="1.8" stroke-dasharray="5,3" opacity=".9"/>
+<polyline points="624,132 545,132 545,214 460,214" fill="none" stroke="#00ff41" stroke-width="1.8" stroke-dasharray="5,3" opacity=".9" filter="url(#fg)"/>
+<polyline points="624,235 535,235 535,236 460,236" fill="none" stroke="#c653ff" stroke-width="1.8" stroke-dasharray="5,3" opacity=".9"/>
+<polyline points="624,338 524,338 524,258 460,258" fill="none" stroke="#ffd60a" stroke-width="1.8" stroke-dasharray="5,3" opacity=".9"/>
+<polyline points="94,125 172,125 172,302 460,302" fill="none" stroke="#ff2d78" stroke-width="1.8" stroke-dasharray="5,3" opacity=".9"/>
+<!-- PSU wire -->
+<polyline points="360,425 360,400 445,400 445,342 460,342" fill="none" stroke="#ff6600" stroke-width="1.5" opacity=".6"/>
+<!-- GND common -->
+<polyline points="94,370 152,370 152,280 460,280" fill="none" stroke="#333" stroke-width="1" opacity=".7"/>
+<!-- wire labels -->
+<text x="163" y="275" fill="#ff7b00" font-size="7" font-family="'JetBrains Mono',monospace" transform="rotate(-90,163,275)" opacity=".8">SIG ~9</text>
+<text x="166" y="210" fill="#00e5ff" font-size="7" font-family="'JetBrains Mono',monospace" transform="rotate(-90,166,210)" opacity=".8">SIG ~10</text>
+<text x="543" y="175" fill="#00ff41" font-size="7" font-family="'JetBrains Mono',monospace" transform="rotate(90,543,175)" opacity=".8">~11</text>
+<text x="533" y="236" fill="#c653ff" font-size="7" font-family="'JetBrains Mono',monospace" transform="rotate(90,533,236)" opacity=".8">~12</text>
+<text x="522" y="300" fill="#ffd60a" font-size="7" font-family="'JetBrains Mono',monospace" transform="rotate(90,522,300)" opacity=".8">~13</text>
+<!-- legend -->
+<text x="10" y="490" fill="#00ff41" font-size="8" font-family="'JetBrains Mono',monospace" opacity=".5">LEGEND:</text>
+<line x1="62" y1="487" x2="88" y2="487" stroke="#ff4400" stroke-width="2"/><text x="91" y="490" fill="#ff6600" font-size="7" font-family="'JetBrains Mono',monospace">5V</text>
+<line x1="108" y1="487" x2="134" y2="487" stroke="#333" stroke-width="2"/><text x="137" y="490" fill="#555" font-size="7" font-family="'JetBrains Mono',monospace">GND</text>
+<line x1="158" y1="487" x2="184" y2="487" stroke="#ff7b00" stroke-width="1.5" stroke-dasharray="4,2"/><text x="187" y="490" fill="#ff7b00" font-size="7" font-family="'JetBrains Mono',monospace">PWM SIGNAL</text>
+</svg>
+    </div>
+    <div>
+      <div class="ct" style="font-size:8px;letter-spacing:3px;color:var(--ng2);text-transform:uppercase;margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid #00ff4110">// Pin Map</div>
+      <div class="pi-item"><div class="pi-dot" style="color:#ff7b00;background:#ff7b00"></div><div class="pi-text"><strong>Pin ~9 → Servo 1 (Base)</strong><span>PWM · 50Hz · 500–2500µs<br>External 5V/3A PSU · GND shared</span></div></div>
+      <div class="pi-item"><div class="pi-dot" style="color:#00e5ff;background:#00e5ff"></div><div class="pi-text"><strong>Pin ~10 → Servo 2 (Shoulder)</strong><span>PWM · Timer1 · External PSU<br>Each servo draws 200–600mA load</span></div></div>
+      <div class="pi-item"><div class="pi-dot" style="color:#00ff41;background:#00ff41"></div><div class="pi-text"><strong>Pin ~11 → Servo 3 (Elbow)</strong><span>PWM · Timer2 · External PSU<br>Servo.attach(11, 500, 2500)</span></div></div>
+      <div class="pi-item"><div class="pi-dot" style="color:#c653ff;background:#c653ff"></div><div class="pi-text"><strong>Pin ~12 → Servo 4 (Wrist-P)</strong><span>PWM · Neutral = 1500µs<br>Calibrate per servo batch</span></div></div>
+      <div class="pi-item"><div class="pi-dot" style="color:#ffd60a;background:#ffd60a"></div><div class="pi-text"><strong>Pin ~13 → Servo 5 (Wrist-R)</strong><span>PWM · Onboard LED flickers<br>Use pin 7 as alt if needed</span></div></div>
+      <div class="pi-item"><div class="pi-dot" style="color:#ff2d78;background:#ff2d78"></div><div class="pi-text"><strong>Pin ~3 → Servo 6 (Gripper)</strong><span>PWM · 0–90° range only<br>Board 5V OK — light servo load</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ §5 CODE ══════════════ -->
+<section class="sec" id="code">
+  <div class="sh"><div class="sn">05</div><h2>Source Code</h2><div class="sr"></div><div class="stag">C++ · ARDUINO · IK</div></div>
+  <div class="tab-row">
+    <button class="tb on" onclick="showTab('tc1',this)">ARDUINO SKETCH</button>
+    <button class="tb" onclick="showTab('tc2',this)">IK SOLVER C++</button>
+    <button class="tb" onclick="showTab('tc3',this)">SERIAL PROTOCOL</button>
+    <button class="tb" onclick="showTab('tc4',this)">PID CONTROLLER</button>
+  </div>
+  <div class="cw on" id="tc1">
+    <div class="cw-top"><span class="cfn">// robot_arm.ino — main sketch</span><button class="cpb" onclick="doCopy('tc1')">[ COPY ]</button></div>
+<pre><span class="pp">#include</span> <span class="st">&lt;Servo.h&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;math.h&gt;</span>
+
+<span class="cm">/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ROBO·ARM CONTROLLER v4.0
+   5-DOF + Gripper · Arduino UNO · 115200
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */</span>
+
+<span class="kw">constexpr</span> <span class="ty">uint8_t</span> PIN_BASE=<span class="nm">9</span>, PIN_SH=<span class="nm">10</span>, PIN_EL=<span class="nm">11</span>;
+<span class="kw">constexpr</span> <span class="ty">uint8_t</span> PIN_WP=<span class="nm">12</span>, PIN_WR=<span class="nm">13</span>, PIN_GR=<span class="nm">3</span>;
+<span class="kw">constexpr</span> <span class="ty">float</span> L1=<span class="nm">120.f</span>, L2=<span class="nm">100.f</span>; <span class="cm">// link mm</span>
+<span class="kw">constexpr</span> <span class="ty">uint16_t</span> DT=<span class="nm">20</span>;          <span class="cm">// loop ms</span>
+
+<span class="ty">Servo</span> sBase,sSh,sEl,sWp,sWr,sGr;
+<span class="kw">struct</span> <span class="ty">Pose</span>{<span class="ty">float</span> b=<span class="nm">90</span>,s=<span class="nm">90</span>,e=<span class="nm">90</span>,wp=<span class="nm">90</span>,wr=<span class="nm">90</span>,g=<span class="nm">90</span>;};
+<span class="ty">Pose</span> cur, tgt;
+<span class="ty">float</span> spd=<span class="nm">1.5f</span>;
+
+<span class="ty">void</span> <span class="fn">setup</span>(){
+  <span class="ty">Serial</span>.<span class="fn">begin</span>(<span class="nm">115200</span>);
+  sBase.<span class="fn">attach</span>(PIN_BASE,<span class="nm">500</span>,<span class="nm">2500</span>); sSh.<span class="fn">attach</span>(PIN_SH,<span class="nm">500</span>,<span class="nm">2500</span>);
+  sEl.<span class="fn">attach</span>(PIN_EL,<span class="nm">500</span>,<span class="nm">2500</span>);   sWp.<span class="fn">attach</span>(PIN_WP,<span class="nm">500</span>,<span class="nm">2500</span>);
+  sWr.<span class="fn">attach</span>(PIN_WR,<span class="nm">500</span>,<span class="nm">2500</span>);   sGr.<span class="fn">attach</span>(PIN_GR,<span class="nm">500</span>,<span class="nm">2000</span>);
+  <span class="ty">Serial</span>.<span class="fn">println</span>(<span class="st">F("ROBOARM_READY")</span>);
+}
+
+<span class="ty">void</span> <span class="fn">loop</span>(){
+  <span class="kw">if</span>(<span class="ty">Serial</span>.<span class="fn">available</span>()) <span class="fn">parseCmd</span>();
+  <span class="fn">stepJoints</span>(); <span class="fn">delay</span>(DT);
+}
+
+<span class="kw">inline</span> <span class="ty">float</span> <span class="fn">step</span>(<span class="ty">float</span> c,<span class="ty">float</span> t,<span class="ty">float</span> s){
+  <span class="ty">float</span> d=t-c;
+  <span class="kw">return</span> <span class="fn">fabsf</span>(d)&lt;s ? t : c+(d&gt;<span class="nm">0</span>?s:-s);
+}
+<span class="ty">void</span> <span class="fn">stepJoints</span>(){
+  cur.b=<span class="fn">step</span>(cur.b,tgt.b,spd); cur.s=<span class="fn">step</span>(cur.s,tgt.s,spd);
+  cur.e=<span class="fn">step</span>(cur.e,tgt.e,spd); cur.wp=<span class="fn">step</span>(cur.wp,tgt.wp,spd);
+  cur.wr=<span class="fn">step</span>(cur.wr,tgt.wr,spd); cur.g=<span class="fn">step</span>(cur.g,tgt.g,spd);
+  sBase.<span class="fn">write</span>(cur.b); sSh.<span class="fn">write</span>(cur.s); sEl.<span class="fn">write</span>(cur.e);
+  sWp.<span class="fn">write</span>(cur.wp);  sWr.<span class="fn">write</span>(cur.wr); sGr.<span class="fn">write</span>(cur.g);
+}
+<span class="ty">void</span> <span class="fn">parseCmd</span>(){
+  <span class="ty">String</span> ln=<span class="ty">Serial</span>.<span class="fn">readStringUntil</span>(<span class="st">'\n'</span>); ln.<span class="fn">trim</span>();
+  <span class="kw">if</span>(ln==<span class="st">"HOME"</span>){tgt={<span class="nm">90</span>,<span class="nm">90</span>,<span class="nm">90</span>,<span class="nm">90</span>,<span class="nm">90</span>,<span class="nm">90</span>};<span class="kw">return</span>;}
+  <span class="kw">auto</span> get=[&](<span class="kw">const</span> <span class="ty">char</span>*k)-><span class="ty">float</span>{
+    <span class="ty">int</span> i=ln.<span class="fn">indexOf</span>(k);
+    <span class="kw">return</span> i&lt;<span class="nm">0</span>?-<span class="nm">1</span>:<span class="fn">constrain</span>(ln.<span class="fn">substring</span>(i+<span class="fn">strlen</span>(k)).<span class="fn">toFloat</span>(),<span class="nm">0</span>,<span class="nm">180</span>);
+  };
+  <span class="kw">if</span>(get(<span class="st">"B:"</span>)>=<span class="nm">0</span>)tgt.b=get(<span class="st">"B:"</span>);  <span class="kw">if</span>(get(<span class="st">"S:"</span>)>=<span class="nm">0</span>)tgt.s=get(<span class="st">"S:"</span>);
+  <span class="kw">if</span>(get(<span class="st">"E:"</span>)>=<span class="nm">0</span>)tgt.e=get(<span class="st">"E:"</span>);  <span class="kw">if</span>(get(<span class="st">"WP:"</span>)>=<span class="nm">0</span>)tgt.wp=get(<span class="st">"WP:"</span>);
+  <span class="kw">if</span>(get(<span class="st">"WR:"</span>)>=<span class="nm">0</span>)tgt.wr=get(<span class="st">"WR:"</span>);<span class="kw">if</span>(get(<span class="st">"G:"</span>)>=<span class="nm">0</span>)tgt.g=get(<span class="st">"G:"</span>);
+}</pre>
+  </div>
+  <div class="cw" id="tc2">
+    <div class="cw-top"><span class="cfn">// ik_solver.hpp — Geometric IK, C++17</span><button class="cpb" onclick="doCopy('tc2')">[ COPY ]</button></div>
+<pre><span class="pp">#pragma once</span>
+<span class="pp">#include</span> <span class="st">&lt;cmath&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;algorithm&gt;</span> <span class="cm">// std::clamp</span>
+
+<span class="kw">namespace</span> RoboArm {
+<span class="kw">inline constexpr</span> <span class="ty">double</span> D2R=3.14159265/180.0, R2D=180.0/3.14159265;
+
+<span class="kw">struct</span> <span class="ty">Vec3</span>{<span class="ty">double</span> x{},y{},z{};};
+<span class="kw">struct</span> <span class="ty">IKResult</span>{
+  <span class="ty">double</span> base_deg{},shoulder_deg{},elbow_deg{};
+  <span class="ty">bool</span>   reachable{};
+  <span class="ty">double</span> reach_ratio{};
+};
+
+<span class="kw">class</span> <span class="ty">Solver</span>{
+<span class="kw">public</span>:
+  <span class="kw">const</span> <span class="ty">double</span> L1,L2;
+  <span class="kw">constexpr</span> <span class="fn">Solver</span>(<span class="ty">double</span> l1,<span class="ty">double</span> l2):L1{l1},L2{l2}{}
+
+  [[nodiscard]] <span class="ty">IKResult</span> <span class="fn">solve</span>(Vec3 p,<span class="ty">bool</span> elbowUp=<span class="kw">true</span>) <span class="kw">const noexcept</span> {
+    IKResult r{};
+    r.base_deg=<span class="fn">std::atan2</span>(p.x,p.z)*R2D; <span class="cm">// base rotation</span>
+    <span class="ty">double</span> h=<span class="fn">std::sqrt</span>(p.x*p.x+p.z*p.z);
+    <span class="ty">double</span> D=<span class="fn">std::sqrt</span>(h*h+p.y*p.y);
+    r.reach_ratio=D/(L1+L2);
+    <span class="kw">if</span>(D>L1+L2+0.01||D<<span class="fn">std::abs</span>(L1-L2)){<span class="kw">return</span> r;} <span class="cm">// unreachable</span>
+    <span class="ty">double</span> c2=<span class="fn">std::clamp</span>((D*D-L1*L1-L2*L2)/(2.0*L1*L2),-1.0,1.0);
+    <span class="ty">double</span> t2=elbowUp?<span class="fn">std::acos</span>(c2):-<span class="fn">std::acos</span>(c2);
+    <span class="ty">double</span> k1=L1+L2*<span class="fn">std::cos</span>(t2), k2=L2*<span class="fn">std::sin</span>(t2);
+    <span class="ty">double</span> t1=<span class="fn">std::atan2</span>(p.y,h)-<span class="fn">std::atan2</span>(k2,k1);
+    r.shoulder_deg=t1*R2D; r.elbow_deg=t2*R2D; r.reachable=<span class="kw">true</span>;
+    <span class="kw">return</span> r;
+  }
+
+  [[nodiscard]] Vec3 <span class="fn">fk</span>(<span class="ty">double</span> bD,<span class="ty">double</span> sD,<span class="ty">double</span> eD) <span class="kw">const noexcept</span> {
+    <span class="ty">double</span> b=bD*D2R,s=sD*D2R,e=eD*D2R;
+    <span class="ty">double</span> r=L1*<span class="fn">std::cos</span>(s)+L2*<span class="fn">std::cos</span>(s+e);
+    <span class="ty">double</span> y=L1*<span class="fn">std::sin</span>(s)+L2*<span class="fn">std::sin</span>(s+e);
+    <span class="kw">return</span> {r*<span class="fn">std::sin</span>(b),y,r*<span class="fn">std::cos</span>(b)};
+  }
+};
+} <span class="cm">// namespace RoboArm</span></pre>
+  </div>
+  <div class="cw" id="tc3">
+    <div class="cw-top"><span class="cfn">// pc_controller.cpp — Serial bridge, C++20</span><button class="cpb" onclick="doCopy('tc3')">[ COPY ]</button></div>
+<pre><span class="pp">#include</span> <span class="st">"ik_solver.hpp"</span>
+<span class="pp">#include</span> <span class="st">"serial_port.h"</span>
+<span class="pp">#include</span> <span class="st">&lt;format&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;thread&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;chrono&gt;</span>
+<span class="kw">using namespace</span> RoboArm;
+<span class="kw">using namespace</span> std::chrono_literals;
+
+<span class="cm">/* Protocol: "B:{f},S:{f},E:{f},WP:{f},WR:{f},G:{f}\n" */</span>
+
+<span class="kw">class</span> <span class="ty">ArmCtrl</span> {
+  SerialPort port_; Solver ik_{<span class="nm">120</span>,<span class="nm">100</span>};
+<span class="kw">public</span>:
+  <span class="kw">explicit</span> <span class="fn">ArmCtrl</span>(<span class="ty">std::string_view</span> dev):port_{dev,<span class="nm">115200</span>}{}
+
+  <span class="ty">void</span> <span class="fn">send</span>(<span class="ty">double</span> b,<span class="ty">double</span> s,<span class="ty">double</span> e,<span class="ty">double</span> wp,<span class="ty">double</span> wr,<span class="ty">double</span> g=<span class="nm">90</span>){
+    port_.<span class="fn">writeLine</span>(<span class="fn">std::format</span>(
+      <span class="st">"B:{:.1f},S:{:.1f},E:{:.1f},WP:{:.1f},WR:{:.1f},G:{:.1f}"</span>,b,s,e,wp,wr,g));
+  }
+
+  <span class="ty">bool</span> <span class="fn">moveTo</span>(Vec3 p,<span class="ty">double</span> wp=<span class="nm">90</span>,<span class="ty">double</span> wr=<span class="nm">90</span>){
+    <span class="kw">auto</span> r=ik_.<span class="fn">solve</span>(p);
+    <span class="kw">if</span>(!r.reachable)<span class="kw">return false</span>;
+    <span class="fn">send</span>(r.base_deg+<span class="nm">90</span>,r.shoulder_deg+<span class="nm">90</span>,r.elbow_deg+<span class="nm">90</span>,wp,wr);
+    <span class="kw">return true</span>;
+  }
+
+  <span class="ty">void</span> <span class="fn">home</span>(){port_.<span class="fn">writeLine</span>(<span class="st">"HOME"</span>);}
+
+  <span class="cm">// Sort colored block: pick from src, drop in bin</span>
+  <span class="ty">void</span> <span class="fn">sortBlock</span>(Vec3 src, Vec3 bin){
+    <span class="fn">moveTo</span>({src.x,src.y+<span class="nm">50</span>,src.z}); std::this_thread::<span class="fn">sleep_for</span>(<span class="nm">700</span>ms);
+    <span class="fn">moveTo</span>(src);                     std::this_thread::<span class="fn">sleep_for</span>(<span class="nm">500</span>ms);
+    <span class="fn">send</span>(<span class="nm">90</span>,<span class="nm">90</span>,<span class="nm">90</span>,<span class="nm">90</span>,<span class="nm">90</span>,<span class="nm">25</span>);         std::this_thread::<span class="fn">sleep_for</span>(<span class="nm">600</span>ms);
+    <span class="fn">moveTo</span>({src.x,src.y+<span class="nm">60</span>,src.z}); std::this_thread::<span class="fn">sleep_for</span>(<span class="nm">500</span>ms);
+    <span class="fn">moveTo</span>({bin.x,bin.y+<span class="nm">60</span>,bin.z}); std::this_thread::<span class="fn">sleep_for</span>(<span class="nm">700</span>ms);
+    <span class="fn">moveTo</span>(bin);                     std::this_thread::<span class="fn">sleep_for</span>(<span class="nm">500</span>ms);
+    <span class="fn">send</span>(<span class="nm">90</span>,<span class="nm">90</span>,<span class="nm">90</span>,<span class="nm">90</span>,<span class="nm">90</span>,<span class="nm">90</span>);         std::this_thread::<span class="fn">sleep_for</span>(<span class="nm">400</span>ms);
+    <span class="fn">home</span>();
+  }
+};</pre>
+  </div>
+  <div class="cw" id="tc4">
+    <div class="cw-top"><span class="cfn">// pid.hpp — Joint PID with anti-windup</span><button class="cpb" onclick="doCopy('tc4')">[ COPY ]</button></div>
+<pre><span class="pp">#pragma once</span>
+<span class="cm">/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PID — closed-loop servo control
+   Requires feedback: encoder or pot
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */</span>
+<span class="kw">class</span> <span class="ty">PID</span>{
+<span class="kw">public</span>:
+  <span class="ty">float</span> Kp,Ki,Kd,setpoint=<span class="nm">0</span>;
+  <span class="ty">float</span> outMin=-<span class="nm">255</span>,outMax=<span class="nm">255</span>,iLim=<span class="nm">80</span>;
+<span class="kw">private</span>:
+  <span class="ty">float</span> integral_=<span class="nm">0</span>,prevMeas_=<span class="nm">0</span>;
+<span class="kw">public</span>:
+  <span class="fn">PID</span>(<span class="ty">float</span> p,<span class="ty">float</span> i,<span class="ty">float</span> d):Kp{p},Ki{i},Kd{d}{}
+  <span class="ty">float</span> <span class="fn">update</span>(<span class="ty">float</span> meas,<span class="ty">float</span> dt){
+    <span class="ty">float</span> err=setpoint-meas;
+    <span class="ty">float</span> P=Kp*err;
+    integral_=<span class="fn">constrain</span>(integral_+err*dt,-iLim,iLim);
+    <span class="ty">float</span> I=Ki*integral_;
+    <span class="ty">float</span> D=Kd*(prevMeas_-meas)/dt; <span class="cm">// derivative on measurement</span>
+    prevMeas_=meas;
+    <span class="kw">return</span> <span class="fn">constrain</span>(P+I+D,outMin,outMax);
+  }
+  <span class="ty">void</span> <span class="fn">reset</span>(){integral_=prevMeas_=<span class="nm">0</span>;}
+};
+<span class="cm">/* TUNING:
+   1. Ki=Kd=0, raise Kp until oscillates
+   2. Kp = 60% of oscillation value
+   3. Add Ki slowly → kill steady-state error
+   4. Add Kd to damp overshoot (watch noise!) */</span></pre>
+  </div>
+</section>
+
+<footer><span>ROBO·ARM</span> // APPLICATIONS LAB v4.0 // WebGL · Three.js · C++17 · Arduino UNO</footer>
+
+<!-- ════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════ -->
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════════
+//  ROBO·ARM  v4.1 — full JS
+// ═══════════════════════════════════════════════════════════
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const D2R=Math.PI/180, R2D=180/Math.PI;
+
+// ── THREE STATE ─────────────────────────────────────────────
+let renderer,scene,camera;
+let j0,j1,j2,j3,j4,gripL,gripR;
+let tgt=[0,0,0,0,0], cur=[0,0,0,0,0];
+let grip=50, speed=0.10, mode='manual';
+let animRunning=false, animT=0;
+let orbitTheta=0.55,orbitPhi=0.46,orbitR=560;
+let orbitDrag=false,orx=0,ory=0;
+let lastT=performance.now(),fpsC=0,fpsAcc=0;
+
+// ── SCENE OBJECTS ───────────────────────────────────────────
+let sceneObjects=[];
+let balls=[], bins=[], blocks=[], carriedObj=null;
+
+function clearScene(){
+  sceneObjects.forEach(o=>scene.remove(o));
+  sceneObjects=[];
+  balls=[]; bins=[]; blocks=[]; carriedObj=null;
+}
+
+function addObj(mesh){
+  scene.add(mesh);
+  sceneObjects.push(mesh);
+  return mesh;
+}
+
+function makeBall(col, x, y, z){
+  const m=new THREE.Mesh(
+    new THREE.SphereGeometry(13,20,20),
+    new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.7,metalness:.1,roughness:.25})
+  );
+  m.position.set(x,y,z);
+  m.castShadow=true;
+  return addObj(m);
+}
+
+function makeBin(col, x, z){
+  const g=new THREE.Group();
+  // floor
+  const fl=new THREE.Mesh(new THREE.BoxGeometry(44,4,44),
+    new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.4,metalness:.1,roughness:.5}));
+  fl.position.set(0,2,0); g.add(fl);
+  // walls — front open
+  const wallMat=new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.25,
+    metalness:.1,roughness:.55,transparent:true,opacity:.5,side:THREE.DoubleSide});
+  [[0,12,22,44,24,3],[0,12,-22,44,24,3],[22,12,0,3,24,44],[-22,12,0,3,24,44]].forEach(([ox,oy,oz,w,h,d])=>{
+    const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wallMat);
+    wall.position.set(ox,oy,oz);
+    g.add(wall);
+  });
+  // glow ring on rim
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(26,2,8,32),
+    new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:1.2,metalness:.3,roughness:.2}));
+  rim.rotation.x=Math.PI/2; rim.position.y=25; g.add(rim);
+  g.position.set(x,0,z);
+  scene.add(g); sceneObjects.push(g);
+  return g;
+}
+
+function makeBlock(col,w,h,d,x,z){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+    new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.55,metalness:.15,roughness:.4}));
+  m.position.set(x,h/2,z);
+  m.castShadow=true;
+  return addObj(m);
+}
+
+function buildSortingScene(){
+  clearScene();
+  // 5 coloured balls scattered to the arm's left
+  const ballDefs=[
+    {col:0xff2233,x:-160,z:55},
+    {col:0x2288ff,x:-145,z:-40},
+    {col:0xffdd00,x:-185,z:10},
+    {col:0xaa44ff,x:-155,z:75},
+    {col:0x00ee66,x:-125,z:-20},
+  ];
+  ballDefs.forEach(({col,x,z})=>balls.push(makeBall(col,x,13,z)));
+
+  // 5 matching bins on the right arc
+  const binDefs=[
+    {col:0xff2233,x:140,z:-60},
+    {col:0x2288ff,x:165,z:10},
+    {col:0xffdd00,x:140,z:75},
+    {col:0xaa44ff,x:100,z:120},
+    {col:0x00ee66,x:55,z:145},
+  ];
+  binDefs.forEach(({col,x,z})=>bins.push(makeBin(col,x,z)));
+
+  // Platform / conveyor under balls
+  const conv=new THREE.Mesh(new THREE.BoxGeometry(120,4,160),
+    new THREE.MeshStandardMaterial({color:0x334455,emissive:0x112233,emissiveIntensity:.3,metalness:.6,roughness:.3}));
+  conv.position.set(-155,0,20); addObj(conv);
+}
+
+function buildStackScene(){
+  clearScene();
+  const defs=[
+    {col:0x00ddff,w:54,h:22,d:54,x:-160,z:50},
+    {col:0xff6633,w:44,h:18,d:44,x:-140,z:-40},
+    {col:0x88ff00,w:34,h:14,d:34,x:-180,z:-10},
+  ];
+  defs.forEach(({col,w,h,d,x,z})=>blocks.push(makeBlock(col,w,h,d,x,z)));
+  // Stack zone marker ring
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(36,2,8,32),
+    new THREE.MeshStandardMaterial({color:0xffffff,emissive:0x88ffcc,emissiveIntensity:.8,transparent:true,opacity:.6}));
+  ring.rotation.x=Math.PI/2; ring.position.set(135,1,50); addObj(ring);
+}
+
+function buildWeldScene(){
+  clearScene();
+  // Workpiece — two plates meeting in an L seam
+  const plateA=new THREE.Mesh(new THREE.BoxGeometry(140,12,40),
+    new THREE.MeshStandardMaterial({color:0x667788,emissive:0x223344,emissiveIntensity:.4,metalness:.8,roughness:.3}));
+  plateA.position.set(10,6,-30); addObj(plateA);
+  const plateB=new THREE.Mesh(new THREE.BoxGeometry(40,12,140),
+    new THREE.MeshStandardMaterial({color:0x667788,emissive:0x223344,emissiveIntensity:.4,metalness:.8,roughness:.3}));
+  plateB.position.set(-50,6,30); addObj(plateB);
+  // weld seam highlight
+  const seam=new THREE.Mesh(new THREE.BoxGeometry(4,16,140),
+    new THREE.MeshStandardMaterial({color:0xffaa00,emissive:0xff6600,emissiveIntensity:1.2,metalness:.2,roughness:.4}));
+  seam.position.set(-30,6,30); addObj(seam);
+}
+
+function buildPCBScene(){
+  clearScene();
+  // PCB board
+  const pcb=new THREE.Mesh(new THREE.BoxGeometry(120,4,80),
+    new THREE.MeshStandardMaterial({color:0x114422,emissive:0x0a3318,emissiveIntensity:.5,metalness:.1,roughness:.6}));
+  pcb.position.set(80,2,30); addObj(pcb);
+  // component trays (2 small boxes left side)
+  [[-155,50],[-155,-20]].forEach(([x,z])=>{
+    const tray=new THREE.Mesh(new THREE.BoxGeometry(36,6,36),
+      new THREE.MeshStandardMaterial({color:0x445566,emissive:0x223344,emissiveIntensity:.4}));
+    tray.position.set(x,3,z); addObj(tray);
+    // component chip
+    const chip=new THREE.Mesh(new THREE.BoxGeometry(16,5,16),
+      new THREE.MeshStandardMaterial({color:0x222222,emissive:0x444444,emissiveIntensity:.3,metalness:.9,roughness:.2}));
+    chip.position.set(x,9,z); addObj(chip);
+    blocks.push(chip);
+  });
+}
+
+// Ball carry — attaches carried object to the EE each frame
+function updateCarry(){
+  if(!carriedObj||!j4)return;
+  const wp=new THREE.Vector3();
+  j4.getWorldPosition(wp);
+  carriedObj.position.set(wp.x,wp.y+58,wp.z);
+}
+
+// called from doStep when app wants to pick/drop
+function scenePickBall(idx){ if(balls[idx])carriedObj=balls[idx]; }
+function sceneDropBall(binIdx){
+  if(!carriedObj||!bins[binIdx])return;
+  const b=bins[binIdx];
+  carriedObj.position.set(b.position.x,20,b.position.z);
+  carriedObj=null;
+}
+function scenePickBlock(idx){ if(blocks[idx])carriedObj=blocks[idx]; }
+function sceneDropBlock(x,y,z){
+  if(!carriedObj)return;
+  carriedObj.position.set(x,y,z); carriedObj=null;
+}
+
+// ── FLOATING CANVAS ─────────────────────────────────────────
+let isMini=false;
+const floatWrap=$('cvWrap');
+const canvas=$('c3d');
+
+function positionCanvas(){
+  const ph=$('vpPlaceholder');
+  const r=ph.getBoundingClientRect();
+  floatWrap.style.cssText='position:fixed;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;height:'+r.height+'px;border-radius:4px;overflow:hidden;pointer-events:all;z-index:500;transition:none';
+  resizeRenderer(r.width, r.height);
+}
+
+function goMini(){
+  if(isMini)return; isMini=true;
+  floatWrap.classList.add('isMini');
+  Object.assign(floatWrap.style,{
+    transition:'all .5s cubic-bezier(.4,0,.2,1)',
+    left:'auto', top:'auto',
+    right:'18px', bottom:'18px',
+    width:'280px', height:'190px',
+    pointerEvents:'all',
+    zIndex:'500',
+  });
+  resizeRenderer(260,174);
+}
+
+function goFull(){
+  if(!isMini)return; isMini=false;
+  floatWrap.classList.remove('isMini');
+  floatWrap.style.transition='none';
+  floatWrap.style.right='auto';
+  floatWrap.style.bottom='auto';
+  floatWrap.style.border='none';
+  floatWrap.style.boxShadow='none';
+  positionCanvas();
+}
+
+function resizeRenderer(w,h){
+  renderer.setSize(w,h);
+  camera.aspect=w/h;
+  camera.updateProjectionMatrix();
+}
+
+function onScroll(){
+  const ph=$('vpPlaceholder');
+  const r=ph.getBoundingClientRect();
+  const vis=r.bottom>80&&r.top<window.innerHeight-80;
+  if(!vis) goMini();
+  else { goFull(); positionCanvas(); }
+}
+
+// ── THREE INIT ───────────────────────────────────────────────
+function initThree(){
+  const ph=$('vpPlaceholder');
+  const w=ph.clientWidth, h=Math.max(480,ph.clientHeight);
+  renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+  renderer.setSize(w,h);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.shadowMap.enabled=true;
+  renderer.setClearColor(0x050a12);
+
+  scene=new THREE.Scene();
+  scene.fog=new THREE.Fog(0x050a12,1000,2200);
+  camera=new THREE.PerspectiveCamera(50,w/h,5,3000);
+  syncCamera();
+
+  // ── LIGHTS — vivid and bright ──
+  scene.add(new THREE.AmbientLight(0xaaccff,3.2));
+
+  const dl=new THREE.DirectionalLight(0xffffff,4.5);
+  dl.position.set(300,600,300); dl.castShadow=true;
+  scene.add(dl);
+
+  const dl2=new THREE.DirectionalLight(0x88ffee,2.2);
+  dl2.position.set(-300,400,-200); scene.add(dl2);
+
+  const pl1=new THREE.PointLight(0x44ffcc,3.0,900);
+  pl1.position.set(-150,350,-100); scene.add(pl1);
+
+  const pl2=new THREE.PointLight(0xffcc66,2.8,800);
+  pl2.position.set(250,250,250); scene.add(pl2);
+
+  const pl3=new THREE.PointLight(0xffffff,2.2,700);
+  pl3.position.set(0,500,0); scene.add(pl3);
+
+  const pl4=new THREE.PointLight(0x8888ff,1.5,600);
+  pl4.position.set(-100,200,-200); scene.add(pl4);
+
+  // grid
+  scene.add(new THREE.GridHelper(800,24,0x004422,0x002211));
+
+  buildArm();
+  positionCanvas();
+  loop3d();
+
+  // orbit
+  canvas.addEventListener('mousedown',e=>{orbitDrag=true;orx=e.clientX;ory=e.clientY;e.preventDefault()},{passive:false});
+  canvas.addEventListener('touchstart',e=>{orbitDrag=true;orx=e.touches[0].clientX;ory=e.touches[0].clientY},{passive:true});
+  window.addEventListener('mousemove',e=>{
+    if(!orbitDrag)return;
+    orbitTheta-=(e.clientX-orx)*.007; orbitPhi-=(e.clientY-ory)*.007;
+    orbitPhi=clamp(orbitPhi,.06,1.45); orx=e.clientX;ory=e.clientY; syncCamera();
+  });
+  window.addEventListener('touchmove',e=>{
+    if(!orbitDrag)return;
+    orbitTheta-=(e.touches[0].clientX-orx)*.007; orbitPhi-=(e.touches[0].clientY-ory)*.007;
+    orbitPhi=clamp(orbitPhi,.06,1.45); orx=e.touches[0].clientX;ory=e.touches[0].clientY; syncCamera();
+  },{passive:true});
+  window.addEventListener('mouseup',()=>orbitDrag=false);
+  window.addEventListener('touchend',()=>orbitDrag=false);
+  canvas.addEventListener('wheel',e=>{orbitR=clamp(orbitR+e.deltaY*.4,250,1000);syncCamera();e.preventDefault()},{passive:false});
+  window.addEventListener('resize',()=>{ if(!isMini)positionCanvas(); });
+  window.addEventListener('scroll',onScroll,{passive:true});
+  floatWrap.addEventListener('click',()=>{ if(isMini){$('sim').scrollIntoView({behavior:'smooth'});} });
+}
+
+function syncCamera(){
+  camera.position.set(
+    orbitR*Math.sin(orbitTheta)*Math.cos(orbitPhi),
+    orbitR*Math.sin(orbitPhi),
+    orbitR*Math.cos(orbitTheta)*Math.cos(orbitPhi));
+  camera.lookAt(0,195,0);
+}
+
+// ── ARM GEOMETRY ─────────────────────────────────────────────
+function mkBox(w,h,d,col,emi){
+  return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+    new THREE.MeshStandardMaterial({color:col,emissive:emi||col,emissiveIntensity:.85,metalness:.55,roughness:.25}));
+}
+function mkSph(r,col,emi){
+  return new THREE.Mesh(new THREE.SphereGeometry(r,16,16),
+    new THREE.MeshStandardMaterial({color:col,emissive:emi||col,emissiveIntensity:1.0,metalness:.45,roughness:.18}));
+}
+function mkCyl(r,h,col,emi){
+  return new THREE.Mesh(new THREE.CylinderGeometry(r,r*1.1,h,16),
+    new THREE.MeshStandardMaterial({color:col,emissive:emi||col,emissiveIntensity:.8,metalness:.5,roughness:.22}));
+}
+
+function buildArm(){
+  // base plate
+  const bp=mkBox(92,18,92,0x22cc55,0x11882a); bp.position.y=9; bp.castShadow=true; scene.add(bp);
+  const tc=mkCyl(26,38,0x33dd66,0x22993d); tc.position.y=46; scene.add(tc);
+
+  // J0 — base Y-rotation
+  j0=new THREE.Group(); j0.position.y=65; scene.add(j0);
+  j0.add(mkSph(21,0x55ffaa,0x33cc77));
+
+  // J1 — shoulder Z-rotation
+  j1=new THREE.Group(); j0.add(j1);
+  const ua=mkBox(15,120,15,0x44eecc,0x22aa88); ua.position.y=60; ua.castShadow=true; j1.add(ua);
+  const j1s=mkSph(17,0x55ffee,0x33ccaa); j1s.position.set(0,120,0); j1.add(j1s);
+
+  // J2 — elbow Z-rotation
+  j2=new THREE.Group(); j2.position.y=120; j1.add(j2);
+  const fa=mkBox(12,98,12,0xff8833,0xcc5511); fa.position.y=49; fa.castShadow=true; j2.add(fa);
+  const j2s=mkSph(14,0xffaa55,0xcc7722); j2s.position.set(0,98,0); j2.add(j2s);
+
+  // J3 — wrist pitch Z-rotation
+  j3=new THREE.Group(); j3.position.y=98; j2.add(j3);
+  const wl=mkBox(10,56,10,0xcc55ff,0x9922cc); wl.position.y=28; j3.add(wl);
+  const j3s=mkSph(11,0xdd77ff,0xaa44dd); j3s.position.set(0,56,0); j3.add(j3s);
+
+  // J4 — wrist roll Y-rotation
+  j4=new THREE.Group(); j4.position.y=56; j3.add(j4);
+  const hn=mkBox(9,36,9,0xee99ff,0xbb66cc); hn.position.y=18; j4.add(hn);
+  const gb=mkBox(24,7,8,0x55ffaa,0x33cc77); gb.position.y=36; j4.add(gb);
+
+  // gripper fingers — yellow
+  gripL=mkBox(5,24,5,0xffee44,0xccaa00); gripL.position.set(-10,48,0); j4.add(gripL);
+  gripR=mkBox(5,24,5,0xffee44,0xccaa00); gripR.position.set( 10,48,0); j4.add(gripR);
+
+  // EE glow
+  const ee=new THREE.Mesh(new THREE.SphereGeometry(5,10,10),
+    new THREE.MeshStandardMaterial({color:0xffffff,emissive:0x44ffff,emissiveIntensity:3}));
+  ee.position.y=60; j4.add(ee);
+}
+
+// ── POSE & RENDER ────────────────────────────────────────────
+function applyPose(a){
+  if(!j0)return;
+  j0.rotation.y= a[0]*D2R;
+  j1.rotation.z=-a[1]*D2R;
+  j2.rotation.z=-a[2]*D2R;
+  j3.rotation.z=-a[3]*D2R;
+  j4.rotation.y= a[4]*D2R;
+  const gw=7+grip/100*15;
+  gripL.position.set(-gw,48,0);
+  gripR.position.set( gw,48,0);
+  // FK for display
+  const b=a[0]*D2R,s=a[1]*D2R,e=a[2]*D2R;
+  const rr=120*Math.cos(s)+98*Math.cos(s+e)+56;
+  const ey=120*Math.sin(s)+98*Math.sin(s+e)+65;
+  const ex=rr*Math.sin(b),ez=rr*Math.cos(b);
+  $('ee').innerHTML=`X:${ex.toFixed(0)}<br>Y:${ey.toFixed(0)}<br>Z:${ez.toFixed(0)}<br><span style="font-size:7px;color:var(--tx3)">END·EFFECTOR mm</span>`;
+  updateJBars(a);
+}
+
+function updateJBars(a){
+  const R=[[-180,180],[-80,80],[-120,120],[-90,90],[-180,180]];
+  for(let i=0;i<5;i++){
+    const pct=((a[i]-R[i][0])/(R[i][1]-R[i][0]))*100;
+    $('jf'+i).style.width=pct+'%';
+    $('jv'+i).textContent=a[i].toFixed(0)+'°';
+  }
+}
+
+function loop3d(){
+  requestAnimationFrame(loop3d);
+  const now=performance.now();
+  const dt=(now-lastT)/1000; lastT=now;
+  fpsC++; fpsAcc+=dt;
+  if(fpsAcc>=.6){ $('fps').textContent=Math.round(fpsC/fpsAcc)+' FPS'; fpsC=0; fpsAcc=0; }
+  if(animRunning) runAnim();
+  for(let i=0;i<5;i++){
+    const d=tgt[i]-cur[i];
+    cur[i]=Math.abs(d)<.12?tgt[i]:cur[i]+d*speed;
+  }
+  applyPose(cur);
+  updateCarry();
+  renderer.render(scene,camera);
+}
+
+let animT2=0;
+function runAnim(){
+  animT2+=0.009;
+  tgt[0]=Math.sin(animT2*.7)*78;
+  tgt[1]=Math.sin(animT2*1.1+.8)*44;
+  tgt[2]=Math.sin(animT2*1.3+2)*68;
+  tgt[3]=Math.sin(animT2*.9+3.5)*42;
+  tgt[4]=Math.sin(animT2*1.6)*95;
+  syncSliders();
+}
+
+// ── CONTROLS ────────────────────────────────────────────────
+function setMode(m){
+  mode=m; animRunning=(m==='anim');
+  ['bManual','bIK','bAnim'].forEach(x=>{const b=$(x);if(b)b.classList.remove('on')});
+  const b=$({manual:'bManual',ik:'bIK',anim:'bAnim'}[m]); if(b)b.classList.add('on');
+  $('dManual').style.display=(m==='manual')?'block':'none';
+  $('dIK').style.display=(m==='ik')?'block':'none';
+}
+
+function usl(sl,pct){ sl.style.backgroundSize=clamp(pct,0,100)+'% 100%'; }
+
+const SL_RANGES=[[-180,180],[-80,80],[-120,120],[-90,90],[-180,180]];
+for(let i=0;i<5;i++){
+  const sl=$('s'+i);
+  sl.addEventListener('input',()=>{
+    tgt[i]=+sl.value;
+    $('lv'+i).textContent=sl.value+'°';
+    usl(sl,((+sl.value-SL_RANGES[i][0])/(SL_RANGES[i][1]-SL_RANGES[i][0]))*100);
+  });
+  usl(sl,50);
+}
+
+$('sG').addEventListener('input',function(){
+  grip=+this.value; $('lG').textContent=this.value+'%'; usl(this,this.value);
+});usl($('sG'),50);
+
+$('sS').addEventListener('input',function(){
+  speed=+this.value/100; $('lS').textContent=(+this.value/10).toFixed(1)+'×';
+  usl(this,((+this.value-1)/59)*100);
+});usl($('sS'),15);
+
+['sIx','sIy','sIz'].forEach((sid,i)=>{
+  const sl=$(sid); const lbl=['lIx','lIy','lIz'][i];
+  const ranges=[[-230,230],[-30,300],[-230,230]];
+  sl.addEventListener('input',()=>{
+    $(lbl).textContent=sl.value;
+    usl(sl,((+sl.value-ranges[i][0])/(ranges[i][1]-ranges[i][0]))*100);
+    solveIKSliders();
+  });
+  usl(sl,((+sl.value-ranges[i][0])/(ranges[i][1]-ranges[i][0]))*100);
+});
+
+function solveIKSliders(){
+  const x=+$('sIx').value,y=+$('sIy').value,z=+$('sIz').value;
+  const s=ik3D(x,y,z); if(s){tgt[0]=s.b;tgt[1]=s.s;tgt[2]=s.e;syncSliders();}
+}
+function ik3D(x,y,z){
+  const L1=120,L2=98,base=Math.atan2(x,z)*R2D;
+  const h=Math.sqrt(x*x+z*z),D=Math.sqrt(h*h+y*y);
+  if(D>L1+L2||D<Math.abs(L1-L2))return null;
+  const c2=clamp((D*D-L1*L1-L2*L2)/(2*L1*L2),-1,1);
+  const t2=Math.acos(c2);
+  const k1=L1+L2*Math.cos(t2),k2=L2*Math.sin(t2);
+  return{b:base,s:(Math.atan2(y,h)-Math.atan2(k2,k1))*R2D,e:t2*R2D};
+}
+
+function syncSliders(){
+  SL_RANGES.forEach(([mn,mx],i)=>{
+    const sl=$('s'+i); sl.value=tgt[i];
+    $('lv'+i).textContent=Math.round(tgt[i])+'°';
+    usl(sl,((tgt[i]-mn)/(mx-mn))*100);
+  });
+}
+
+const PRESETS={
+  home:[0,0,0,0,0],pick:[0,-55,108,-53,0],
+  place:[88,-35,72,-37,0],wave:[0,45,-115,45,140],reach:[0,78,-28,-50,0]
+};
+function preset(n){const p=PRESETS[n];if(p){tgt=[...p];syncSliders();}}
+
+function resetAll(){
+  stopTask(true); clearScene();
+  tgt=[0,0,0,0,0]; cur=[0,0,0,0,0];
+  grip=50; speed=0.10;
+  $('sG').value=50; $('lG').textContent='50%'; usl($('sG'),50);
+  $('sS').value=12; $('lS').textContent='1.2×'; usl($('sS'),15);
+  syncSliders(); setMode('manual');
+  orbitTheta=0.55; orbitPhi=0.46; orbitR=560; syncCamera();
+  animT2=0;
+}
+
+// ── APPS ────────────────────────────────────────────────────
+const APPS=[
+  {
+    id:'sort',col:'#ff7b00',icon:'🎨',name:'Color Sorter',
+    desc:'5 colored balls are scattered on a platform. The arm detects each one by color, picks it up, and deposits it into its matching colored bin.',
+    badge:'SORTING',
+    steps:[
+      {label:'Survey workspace',note:'Arm rises to scan — detecting 5 colored balls on platform…',pose:[0,-15,30,0,0],g:80,dur:1100},
+      {label:'Target BALL 0 (Red)',note:'IK solver locks onto red ball at (-160, 13, 55)…',pose:[-55,-48,88,-40,0],g:80,dur:900,pickBall:0},
+      {label:'Descend to red ball',note:'Approaching — gripper open wide — aligning…',pose:[-55,-60,108,-48,0],g:80,dur:700},
+      {label:'Grip red ball',note:'Gripper closes — red ball secured ✓',pose:[-55,-60,108,-48,0],g:12,dur:600},
+      {label:'Lift red ball',note:'Lifting clear of platform — transit height reached…',pose:[-55,-38,72,-34,0],g:12,dur:700},
+      {label:'Rotate to RED bin',note:'Base sweeps +120° to red bin zone…',pose:[65,-38,72,-34,0],g:12,dur:1000},
+      {label:'Lower into RED bin',note:'Descending into red bin — final approach…',pose:[65,-52,100,-48,0],g:12,dur:700,dropBall:0},
+      {label:'Release — red sorted ✓',note:'Ball dropped into red bin. 1/5 sorted.',pose:[65,-50,97,-46,0],g:80,dur:500},
+      {label:'Target BALL 1 (Blue)',note:'Rotating back — locking onto blue ball…',pose:[-48,-48,88,-40,20],g:80,dur:1000,pickBall:1},
+      {label:'Pick blue ball',note:'Descend, grip, lift — blue ball secured…',pose:[-48,-60,108,-48,20],g:12,dur:700},
+      {label:'Place in BLUE bin',note:'Carrying to blue bin at (165, -, 10)…',pose:[70,-48,90,-42,20],g:12,dur:1000,dropBall:1},
+      {label:'Release blue ✓',note:'Blue ball sorted. 2/5 complete.',pose:[70,-50,97,-46,20],g:80,dur:500},
+      {label:'Target BALL 2 (Yellow)',note:'Sweeping to yellow ball position…',pose:[-62,-48,90,-42,0],g:80,dur:1000,pickBall:2},
+      {label:'Pick yellow ball',note:'Yellow ball gripped and lifted…',pose:[-62,-60,108,-48,0],g:12,dur:700},
+      {label:'Place in YELLOW bin',note:'Yellow bin at (140, -, 75) — depositing…',pose:[55,-44,83,-38,0],g:12,dur:1000,dropBall:2},
+      {label:'Release yellow ✓',note:'Yellow sorted. 3/5 complete.',pose:[55,-50,97,-46,0],g:80,dur:500},
+      {label:'Target BALL 3 (Purple)',note:'Tracking purple ball at (-155, 13, 75)…',pose:[-58,-46,86,-40,-20],g:80,dur:1000,pickBall:3},
+      {label:'Pick purple ball',note:'Gripped — lifting to transit height…',pose:[-58,-60,108,-48,-20],g:12,dur:700},
+      {label:'Place in PURPLE bin',note:'Purple bin arc at (100, -, 120)…',pose:[38,-44,82,-38,0],g:12,dur:1000,dropBall:3},
+      {label:'Release purple ✓',note:'Purple sorted. 4/5 complete.',pose:[38,-50,96,-46,0],g:80,dur:500},
+      {label:'Target BALL 4 (Green)',note:'Final ball — green at (-125, 13, -20)…',pose:[-42,-46,85,-40,30],g:80,dur:900,pickBall:4},
+      {label:'Pick green ball',note:'Last ball — gripping carefully…',pose:[-42,-60,108,-48,30],g:12,dur:700},
+      {label:'Place in GREEN bin',note:'Green bin at (55, -, 145) — final drop…',pose:[20,-44,83,-38,30],g:12,dur:1100,dropBall:4},
+      {label:'All 5 sorted! ✓',note:'Mission complete — all balls in matching bins.',pose:[0,-14,25,-12,0],g:80,dur:800},
+      {label:'Return home',note:'Sorting cycle done. Efficiency: 100%.',pose:[0,0,0,0,0],g:50,dur:900},
+    ]
+  },
+  {
+    id:'stack',col:'#00e5ff',icon:'🏗️',name:'Block Stacker',
+    desc:'Picks 3 blocks of different sizes from staging positions and stacks them tallest-first, forming a stable tower.',
+    badge:'STACKING',
+    steps:[
+      {label:'Survey staging area',note:'Scanning 3 blocks — cyan(large), orange(medium), lime(small)…',pose:[0,-10,20,0,0],g:80,dur:900},
+      {label:'Approach block 0 (large)',note:'Targeting cyan block at (-160,22,50)…',pose:[-55,-50,93,-43,0],g:80,dur:900,pickBlock:0},
+      {label:'Grip block 0',note:'Gripper closes on large cyan block…',pose:[-55,-58,106,-48,0],g:16,dur:700},
+      {label:'Lift block 0',note:'Lifting clear — transit height…',pose:[-55,-35,68,-33,0],g:16,dur:700},
+      {label:'Place at stack base',note:'Lowering to stack zone at (135,11,50)…',pose:[45,-52,96,-44,0],g:16,dur:1000,dropBlock:[135,11,50]},
+      {label:'Release — Layer 1 ✓',note:'Large block placed. Foundation solid.',pose:[45,-52,96,-44,0],g:82,dur:600},
+      {label:'Approach block 1 (medium)',note:'Targeting orange block at (-140,9,-40)…',pose:[-48,-50,91,-41,20],g:80,dur:900,pickBlock:1},
+      {label:'Grip block 1',note:'Medium orange block secured…',pose:[-48,-56,103,-47,20],g:16,dur:700},
+      {label:'Lift block 1',note:'Transit height — carrying to stack…',pose:[-48,-35,68,-33,20],g:16,dur:700},
+      {label:'Stack on Layer 1',note:'Height compensation: +22mm. Lowering…',pose:[45,-46,88,-40,0],g:16,dur:1000,dropBlock:[135,33,50]},
+      {label:'Release — Layer 2 ✓',note:'Medium block stacked. Tower: 40mm.',pose:[45,-46,88,-40,0],g:82,dur:600},
+      {label:'Approach block 2 (small)',note:'Targeting lime block at (-180,7,-10)…',pose:[-60,-47,86,-38,-25],g:80,dur:900,pickBlock:2},
+      {label:'Grip block 2',note:'Final block — smallest — gripped…',pose:[-60,-55,102,-46,-25],g:16,dur:700},
+      {label:'Lift block 2',note:'Transit height — precision critical now…',pose:[-60,-34,66,-32,-25],g:16,dur:700},
+      {label:'Stack on Layer 2',note:'Height: +40mm. Placing top block…',pose:[45,-40,78,-38,0],g:16,dur:1100,dropBlock:[135,51,50]},
+      {label:'Tower Complete! ✓',note:'3-block tower: 65mm tall. Placement accuracy ±1.5mm.',pose:[45,-40,78,-38,0],g:82,dur:700},
+      {label:'Return home',note:'Stacking done. Admire the tower 🏗️',pose:[0,0,0,0,0],g:50,dur:1000},
+    ]
+  },
+  {
+    id:'paint',col:'#c653ff',icon:'🖌️',name:'Paint Stroke',
+    desc:'Traces a complex artistic path — like a spray paint robot or CNC pen plotter — with continuous wrist compensation throughout.',
+    badge:'DRAWING',
+    steps:[
+      {label:'Init paint mode',note:'Activating wrist roll for brush angle control…',pose:[0,5,-10,0,0],g:60,dur:800},
+      {label:'Move to canvas start',note:'Positioning at stroke origin — top-left…',pose:[-70,-40,70,-30,-60],g:55,dur:1000},
+      {label:'Stroke 1 — horizontal',note:'Horizontal baseline — 200mm long…',pose:[0,-40,70,-30,-60],g:55,dur:1100},
+      {label:'Arc up — curve',note:'Curved arc upward — wrist pitch adjusts…',pose:[30,-50,90,-45,-45],g:55,dur:900},
+      {label:'Stroke 2 — diagonal',note:'45° diagonal with wrist roll compensation…',pose:[60,-42,74,-36,45],g:55,dur:1000},
+      {label:'Loop back — arc',note:'Smooth return arc — low jerk profile…',pose:[20,-56,102,-46,20],g:55,dur:900},
+      {label:'Stroke 3 — vertical',note:'Vertical — shoulder drives, elbow holds…',pose:[0,-60,108,-48,0],g:55,dur:1000},
+      {label:'Spiral inward',note:'Tightening spiral — all 5 joints simultaneous…',pose:[-25,-52,95,-40,-45],g:55,dur:900},
+      {label:'Spiral outward',note:'Expanding spiral — Jacobian path-follow…',pose:[-55,-44,80,-34,60],g:55,dur:1000},
+      {label:'Final flourish',note:'Dramatic wrist roll finale…',pose:[0,-35,60,-25,180],g:55,dur:1100},
+      {label:'Lift and done',note:'Artwork complete — 840mm total path.',pose:[0,-15,25,-10,0],g:60,dur:800},
+      {label:'Return home',note:'Back to rest.',pose:[0,0,0,0,0],g:50,dur:900},
+    ]
+  },
+  {
+    id:'weld',col:'#ffd60a',icon:'⚡',name:'Weld Path',
+    desc:'Follows a precise MIG weld seam along a workpiece, maintaining 75° torch angle with wrist compensation throughout the joint.',
+    badge:'WELDING',
+    steps:[
+      {label:'Pre-heat standoff',note:'15mm above weld start — torch pre-heating…',pose:[-60,-44,80,-36,0],g:90,dur:900},
+      {label:'Strike arc',note:'Arc struck — current 180A — seam tracking begins…',pose:[-60,-50,95,-45,0],g:90,dur:700},
+      {label:'Weld A — straight',note:'Traveling 2mm/s along seam A…',pose:[-30,-50,92,-42,0],g:90,dur:1000},
+      {label:'Weld B — curve',note:'Seam curves — base rotates to track…',pose:[0,-50,92,-42,0],g:90,dur:1000},
+      {label:'Corner — dwell',note:'0.5s dwell at corner for full penetration…',pose:[25,-52,98,-46,15],g:90,dur:1200},
+      {label:'Weld C — far side',note:'Post-corner — resuming travel speed…',pose:[50,-50,92,-42,20],g:90,dur:1000},
+      {label:'Fill pass — weave',note:'Weave oscillation active — fill pass…',pose:[65,-48,88,-40,0],g:90,dur:1000},
+      {label:'Crater fill',note:'End-of-weld crater fill — tapering current…',pose:[70,-52,98,-46,0],g:90,dur:1200},
+      {label:'Break arc & retract',note:'Arc off — retracting to inspection height…',pose:[70,-38,68,-30,0],g:90,dur:800},
+      {label:'Inspection sweep',note:'Post-weld visual scan — no cold lap detected ✓',pose:[20,-38,68,-30,0],g:90,dur:1000},
+      {label:'Return home',note:'Weld complete. Seam 340mm. Quality: A+',pose:[0,0,0,0,0],g:50,dur:1000},
+    ]
+  },
+  {
+    id:'surgery',col:'#ff2d78',icon:'🩺',name:'PCB Assembly',
+    desc:'Places tiny IC components and resistors onto a PCB with sub-mm accuracy using slow speed and haptic-style pressure sensing.',
+    badge:'PRECISION',
+    steps:[
+      {label:'Calibration',note:'Touching reference pin — calibrating origin…',pose:[0,-5,10,-5,0],g:70,dur:1000},
+      {label:'Approach IC tray',note:'Slow 0.3× speed — nearing component tray…',pose:[-52,-52,95,-43,0],g:80,dur:1100,pickBlock:0},
+      {label:'Align orientation',note:'Wrist roll to 90° — pin 1 marker matched…',pose:[-52,-54,100,-46,90],g:80,dur:700},
+      {label:'Grip IC1',note:'10°/s grip close — pressure sensing active…',pose:[-52,-56,104,-48,90],g:10,dur:900},
+      {label:'Vision check',note:'Raising — optical check passed ✓',pose:[-52,-42,78,-36,90],g:10,dur:700},
+      {label:'Over PCB socket',note:'Centering over J4 socket at +36°…',pose:[36,-44,80,-36,90],g:10,dur:1000},
+      {label:'Micro-correction',note:'0.3mm offset corrected — aligned ✓',pose:[36,-44,80,-37,90],g:10,dur:600},
+      {label:'Insert IC1',note:'0.2mm/s descent — feel-based insertion…',pose:[36,-56,104,-48,90],g:10,dur:1100,dropBlock:[80,8,30]},
+      {label:'Seat and lock',note:'Socket latched ✓ Force: 1.2N',pose:[36,-58,108,-50,90],g:7,dur:700},
+      {label:'Retract clear',note:'Clear of component — moving to R2…',pose:[36,-42,76,-34,90],g:85,dur:700},
+      {label:'Pick resistor R2',note:'0402 resistor in feeder — approaching…',pose:[-45,-50,92,-42,-45],g:82,dur:900,pickBlock:1},
+      {label:'Place R2 on pad',note:'Placing on pad P2 — flux applied…',pose:[55,-54,100,-46,-45],g:10,dur:900,dropBlock:[90,8,45]},
+      {label:'Assembly complete ✓',note:'All components placed — ready for reflow.',pose:[0,0,0,0,0],g:50,dur:1000},
+    ]
+  },
+  {
+    id:'demo',col:'#aaff00',icon:'🎭',name:'Dance Routine',
+    desc:'Full 5-DOF choreography showcasing the complete range of motion — all joints moving simultaneously with smooth velocity profiles.',
+    badge:'LIVE DEMO',
+    steps:[
+      {label:'Opening bow',note:'All joints sweep to greeting pose…',pose:[0,70,-30,-40,0],g:80,dur:1000},
+      {label:'Wave right',note:'Base +90° — shoulder and wrist roll follow…',pose:[90,50,-80,30,120],g:70,dur:900},
+      {label:'Wave left',note:'Mirror sweep — full ROM demonstration…',pose:[-90,50,-80,30,-120],g:70,dur:900},
+      {label:'Full reach forward',note:'Maximum extension — near-singular config…',pose:[0,55,-20,-35,0],g:50,dur:1000},
+      {label:'Spiral wind-up',note:'Counter-rotating joints — building tension…',pose:[120,40,-60,20,180],g:30,dur:1000},
+      {label:'Spiral release',note:'Full kinetic release — dynamic reversal…',pose:[-120,40,-60,20,-180],g:80,dur:1000},
+      {label:'Crouch low',note:'Deep elbow flex — clearance maneuver…',pose:[0,-65,115,-50,0],g:60,dur:900},
+      {label:'Pop up snap',note:'Rapid extension — pneumatic snap…',pose:[0,75,-25,-50,0],g:40,dur:700},
+      {label:'Side twist',note:'Base-dominant — 155° torso-like motion…',pose:[155,-30,50,-20,90],g:60,dur:1000},
+      {label:'Counter twist',note:'310° sweep — full base arc…',pose:[-155,-30,50,-20,-90],g:60,dur:1100},
+      {label:'Point at audience',note:'Gripper at 25% — pointing index pose…',pose:[0,45,-15,-30,0],g:25,dur:900},
+      {label:'Final bow',note:'Curtain call — joints settle gracefully. 🎉',pose:[0,60,-20,-40,0],g:90,dur:1000},
+      {label:'Rest',note:'Routine complete.',pose:[0,0,0,0,0],g:50,dur:1000},
+    ]
+  }
+];
+
+// ── TASK RUNNER ──────────────────────────────────────────────
+let taskRunning=false, taskApp=null, taskStep=0, taskTimer=null, taskAbort=false;
+
+function buildAppCards(){
+  const grid=$('appGrid');
+  APPS.forEach(app=>{
+    grid.innerHTML+=`
+    <div class="acard" id="ac_${app.id}" style="--ac:${app.col}">
+      <div class="a-prog" id="ap_${app.id}" style="--ac:${app.col}"></div>
+      <div class="a-badge" style="color:${app.col};border-color:${app.col}">${app.badge}</div>
+      <span class="a-icon">${app.icon}</span>
+      <div class="a-name" style="color:${app.col}">${app.name}</div>
+      <div class="a-desc">${app.desc}</div>
+      <div class="a-btns">
+        <button class="a-run" id="ar_${app.id}" onclick="runApp('${app.id}');event.stopPropagation()" style="border-color:${app.col};color:${app.col}">▶ RUN</button>
+        <button class="a-stop" id="as_${app.id}" onclick="stopTask();event.stopPropagation()" style="display:none">■ STOP</button>
+      </div>
+    </div>`;
+  });
+}
+
+function runApp(id){
+  if(taskRunning)stopTask(true);
+  const app=APPS.find(a=>a.id===id); if(!app)return;
+  taskApp=app; taskStep=0; taskRunning=true; taskAbort=false;
+  mode='task'; animRunning=false;
+  clearScene();
+  // build scene for this app
+  if(id==='sort')  buildSortingScene();
+  if(id==='stack') buildStackScene();
+  if(id==='weld')  buildWeldScene();
+  if(id==='surgery') buildPCBScene();
+
+  document.querySelectorAll('.acard').forEach(el=>el.classList.remove('running'));
+  $('ac_'+id).classList.add('running');
+  document.querySelectorAll('.a-stop').forEach(el=>el.style.display='none');
+  document.querySelectorAll('.a-run').forEach(el=>el.textContent='▶ RUN');
+  $('as_'+id).style.display='inline-block';
+  $('ar_'+id).textContent='▶ RUNNING';
+
+  $('sPanel').classList.add('show');
+  $('spName').textContent=app.name;
+  $('spName').style.color=app.col;
+  $('spBar').style.background=app.col;
+  $('spBar').style.boxShadow=`0 0 10px ${app.col}`;
+  $('spNote').style.borderLeftColor=app.col;
+  $('spLog').innerHTML='';
+  $('miniTask').textContent=app.name.toUpperCase();
+
+  doStep();
+}
+
+function doStep(){
+  if(taskAbort||!taskRunning)return;
+  const app=taskApp, steps=app.steps;
+  if(taskStep>=steps.length){finishTask();return;}
+  const s=steps[taskStep];
+
+  // arm + gripper
+  tgt=[...s.pose]; grip=s.g??50;
+  $('sG').value=grip; $('lG').textContent=grip+'%'; usl($('sG'),grip);
+  syncSliders();
+
+  // scene object events
+  if(s.pickBall  != null) scenePickBall(s.pickBall);
+  if(s.dropBall  != null) sceneDropBall(s.dropBall);
+  if(s.pickBlock != null) scenePickBlock(s.pickBlock);
+  if(s.dropBlock != null){
+    // delayed drop so arm is near the destination first
+    setTimeout(()=>sceneDropBlock(s.dropBlock[0],s.dropBlock[1],s.dropBlock[2]),
+      Math.round(s.dur*0.7));
+  }
+
+  // status panel
+  const pct=Math.round(taskStep/steps.length*100);
+  $('spBar').style.width=pct+'%';
+  $('spStep').textContent=`Step ${taskStep+1} / ${steps.length}`;
+  $('spNote').textContent=s.note;
+  $('ap_'+app.id).style.width=pct+'%';
+
+  const log=$('spLog');
+  if(log.lastChild) log.lastChild.className='le done';
+  const le=document.createElement('span');
+  le.className='le cur';
+  le.textContent=`[${String(taskStep+1).padStart(2,'0')}] ${s.label}`;
+  log.appendChild(le); log.scrollTop=log.scrollHeight;
+
+  taskStep++;
+  taskTimer=setTimeout(doStep,s.dur||1000);
+}
+
+function finishTask(){
+  taskRunning=false;
+  const app=taskApp; if(!app)return;
+  $('spBar').style.width='100%';
+  $('spStep').textContent=`Complete! ${app.steps.length}/${app.steps.length}`;
+  $('spNote').textContent=`✓ ${app.name} completed successfully.`;
+  const log=$('spLog');
+  if(log.lastChild) log.lastChild.className='le done';
+  const fin=document.createElement('span');
+  fin.className='le done'; fin.textContent='✓ TASK COMPLETE';
+  log.appendChild(fin); log.scrollTop=log.scrollHeight;
+  $('ac_'+app.id).classList.remove('running');
+  $('ap_'+app.id).style.width='100%';
+  $('as_'+app.id).style.display='none';
+  $('ar_'+app.id).textContent='▶ RUN';
+  $('miniTask').textContent='';
+  setTimeout(()=>{$('ap_'+app.id).style.width='0%';},3500);
+}
+
+function stopTask(silent=false){
+  taskAbort=true; taskRunning=false;
+  clearTimeout(taskTimer);
+  if(!silent&&taskApp){
+    $('ac_'+taskApp.id).classList.remove('running');
+    $('ap_'+taskApp.id).style.width='0%';
+    $('as_'+taskApp.id).style.display='none';
+    $('ar_'+taskApp.id).textContent='▶ RUN';
+    $('spNote').textContent='Task stopped.';
+    $('miniTask').textContent='';
+  }
+  clearScene();
+}
+
+// ── 2D IK CANVAS ────────────────────────────────────────────
+const ikC=$('cik'), ikX=ikC.getContext('2d');
+let ikTx=185, ikTy=60, ikDragging=false;
+
+function drawIK(){
+  requestAnimationFrame(drawIK);
+  const W=ikC.width,H=ikC.height;
+  // origin at 62% down — arm fully visible above and below
+  const cx=W/2, cy=H*0.5;
+  ikX.clearRect(0,0,W,H);
+  ikX.fillStyle='#050a12'; ikX.fillRect(0,0,W,H);
+
+  // grid
+  ikX.strokeStyle='#0a1525'; ikX.lineWidth=.6;
+  for(let x=0;x<W;x+=28){ikX.beginPath();ikX.moveTo(x,0);ikX.lineTo(x,H);ikX.stroke();}
+  for(let y=0;y<H;y+=28){ikX.beginPath();ikX.moveTo(0,y);ikX.lineTo(W,y);ikX.stroke();}
+
+  // axes
+  ikX.strokeStyle='#00ff8820'; ikX.lineWidth=1;
+  ikX.beginPath();ikX.moveTo(0,cy);ikX.lineTo(W,cy);ikX.stroke();
+  ikX.beginPath();ikX.moveTo(cx,0);ikX.lineTo(cx,H);ikX.stroke();
+
+  const L1=108,L2=90,maxR=L1+L2;
+  const D=Math.sqrt(ikTx*ikTx+ikTy*ikTy);
+  const ok=D<=maxR&&D>=Math.abs(L1-L2);
+  let t1=0,t2=0;
+  if(ok){
+    const c2=clamp((D*D-L1*L1-L2*L2)/(2*L1*L2),-1,1);
+    t2=Math.acos(c2);
+    const k1=L1+L2*Math.cos(t2),k2=L2*Math.sin(t2);
+    t1=Math.atan2(ikTy,ikTx)-Math.atan2(k2,k1);
+  }
+
+  // reach zone
+  ikX.beginPath();ikX.arc(cx,cy,maxR,0,Math.PI*2);
+  ikX.strokeStyle=ok?'#00ff8820':'#ff2d7820';
+  ikX.lineWidth=2;ikX.setLineDash([6,5]);ikX.stroke();ikX.setLineDash([]);
+
+  // joint world positions
+  const j0p={x:cx,y:cy};
+  const j1p={x:cx+L1*Math.cos(t1), y:cy-L1*Math.sin(t1)};
+  const j2p={x:j1p.x+L2*Math.cos(t1+t2), y:j1p.y-L2*Math.sin(t1+t2)};
+
+  ikX.shadowBlur=16;
+  // upper arm — cyan
+  ikX.shadowColor='#00d4ff';
+  ikX.beginPath();ikX.moveTo(j0p.x,j0p.y);ikX.lineTo(j1p.x,j1p.y);
+  ikX.strokeStyle='#00d4ff';ikX.lineWidth=10;ikX.lineCap='round';ikX.stroke();
+  // forearm — orange
+  ikX.shadowColor='#ff8833';
+  ikX.beginPath();ikX.moveTo(j1p.x,j1p.y);ikX.lineTo(j2p.x,j2p.y);
+  ikX.strokeStyle='#ff8833';ikX.lineWidth=8;ikX.stroke();
+  ikX.shadowBlur=0;
+
+  // joints
+  [[j0p,16,'#00ff88'],[j1p,13,'#00d4ff']].forEach(([p,r,sc])=>{
+    ikX.beginPath();ikX.arc(p.x,p.y,r,0,Math.PI*2);
+    ikX.fillStyle='#050a12';ikX.fill();
+    ikX.strokeStyle=sc;ikX.lineWidth=2.5;ikX.stroke();
+    ikX.beginPath();ikX.arc(p.x,p.y,5,0,Math.PI*2);
+    ikX.fillStyle=sc;
+    ikX.shadowColor=sc;ikX.shadowBlur=10;ikX.fill();ikX.shadowBlur=0;
+  });
+
+  // EE
+  const eecol=ok?'#00ff88':'#ff2d78';
+  ikX.shadowColor=eecol;ikX.shadowBlur=20;
+  ikX.beginPath();ikX.arc(j2p.x,j2p.y,9,0,Math.PI*2);
+  ikX.fillStyle=eecol;ikX.fill();
+  ikX.shadowBlur=0;
+
+  // target crosshair
+  const tpx=cx+ikTx, tpy=cy-ikTy;
+  ikX.strokeStyle=ok?'#00ff88':'#ff2d78';ikX.lineWidth=1.5;ikX.setLineDash([4,3]);
+  ikX.beginPath();ikX.arc(tpx,tpy,7,0,Math.PI*2);ikX.stroke();
+  ikX.beginPath();
+  ikX.moveTo(tpx-14,tpy);ikX.lineTo(tpx+14,tpy);
+  ikX.moveTo(tpx,tpy-14);ikX.lineTo(tpx,tpy+14);
+  ikX.stroke();ikX.setLineDash([]);
+  // reach line
+  ikX.beginPath();ikX.moveTo(cx,cy);ikX.lineTo(tpx,tpy);
+  ikX.strokeStyle='#00ff8812';ikX.lineWidth=1;ikX.setLineDash([5,4]);ikX.stroke();ikX.setLineDash([]);
+
+  // readouts
+  $('rt1').textContent=(t1*R2D).toFixed(1)+'°';
+  $('rt2').textContent=(t2*R2D).toFixed(1)+'°';
+  $('rtx').textContent=ikTx.toFixed(0);
+  $('rty').textContent=ikTy.toFixed(0);
+  $('rrch').textContent=Math.min(100,D/maxR*100).toFixed(0)+'%';
+  const rs=$('rstatus');
+  rs.textContent=ok?'SOLVED':'NO SOLN';
+  rs.style.color=ok?'var(--ng)':'#ff2d78';
+}
+
+function ikFromEvent(e){
+  const r=ikC.getBoundingClientRect();
+  const cx=ikC.width/2, cy=ikC.height*0.5;
+  const scX=ikC.width/r.width, scY=ikC.height/r.height;
+  const ex=e.touches?e.touches[0].clientX:e.clientX;
+  const ey=e.touches?e.touches[0].clientY:e.clientY;
+  ikTx=(ex-r.left)*scX-cx;
+  ikTy=-((ey-r.top)*scY-cy);
+}
+ikC.addEventListener('mousedown',e=>{ikDragging=true;ikFromEvent(e);});
+ikC.addEventListener('touchstart',e=>{ikDragging=true;ikFromEvent(e);},{passive:true});
+window.addEventListener('mousemove',e=>{if(ikDragging)ikFromEvent(e);});
+window.addEventListener('touchmove',e=>{if(ikDragging)ikFromEvent(e);},{passive:true});
+window.addEventListener('mouseup',()=>ikDragging=false);
+window.addEventListener('touchend',()=>ikDragging=false);
+
+// ── CODE TABS ────────────────────────────────────────────────
+function showTab(id,btn){
+  document.querySelectorAll('.cw').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(e=>e.classList.remove('on'));
+  $(id).classList.add('on'); btn.classList.add('on');
+}
+function doCopy(id){
+  const t=$(id).querySelector('pre').textContent;
+  navigator.clipboard.writeText(t).then(()=>{
+    const b=$(id).querySelector('.cpb');
+    const o=b.textContent; b.textContent='[ COPIED! ]'; b.style.color='var(--ng)';
+    setTimeout(()=>{b.textContent=o;b.style.color='';},1600);
+  });
+}
+
+// ── ARDUINO TOOLTIPS ─────────────────────────────────────────
+const tip=$('tip');
+document.querySelectorAll('.servo-g').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{tip.style.display='block';tip.innerHTML=el.dataset.tip.replace(/\n/g,'<br>');});
+  el.addEventListener('mousemove',e=>{tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-8)+'px';});
+  el.addEventListener('mouseleave',()=>tip.style.display='none');
+});
+
+// ── BOOT ─────────────────────────────────────────────────────
+window.addEventListener('load',()=>{
+  buildAppCards();
+  initThree();
+  drawIK();
+  setTimeout(onScroll,120);
+});
+</script>
+</body>
+</html>

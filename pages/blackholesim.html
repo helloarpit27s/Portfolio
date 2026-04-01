@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Black Hole — Gravitational Lensing Simulation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@300;400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --gold: #e8a020;
+    --bg: #000005;
+    --panel-bg: rgba(8,8,20,0.88);
+    --border: rgba(232,160,32,0.25);
+    --text: #ccc;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    overflow: hidden;
+    font-family: 'Space Mono', monospace;
+    color: var(--text);
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  #canvas-container { position: fixed; inset: 0; z-index: 0; }
+
+  canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    cursor: grab;
+  }
+  canvas:active { cursor: grabbing; }
+
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+
+  #title-block { position: absolute; top: 28px; left: 36px; }
+  #title-block h1 {
+    font-family: 'Orbitron', sans-serif; font-weight: 700;
+    font-size: 1.05rem; letter-spacing: 0.25em;
+    color: var(--gold); text-transform: uppercase;
+  }
+  #title-block p {
+    font-size: 0.62rem; color: rgba(232,160,32,0.45);
+    letter-spacing: 0.18em; margin-top: 3px;
+  }
+
+  /* Action Buttons Container */
+  #top-actions {
+    position: absolute; top: 20px; right: 20px;
+    display: flex; gap: 10px; z-index: 20;
+  }
+
+  .action-btn {
+    background: var(--panel-bg); border: 1px solid var(--border);
+    color: var(--gold); padding: 10px 14px; border-radius: 4px;
+    font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.15em;
+    cursor: pointer; pointer-events: all;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: background 0.2s, color 0.2s;
+  }
+  .action-btn:hover { background: rgba(232,160,32,0.15); }
+
+  #controls {
+    position: absolute; top: 65px; right: 20px; width: 230px;
+    background: var(--panel-bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 14px 16px;
+    pointer-events: all; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease, pointer-events 0.3s ease;
+  }
+  
+  #controls.hidden {
+    opacity: 0; pointer-events: none; transform: translateY(-10px);
+  }
+
+  #controls h2 {
+    font-family: 'Orbitron', sans-serif; font-size: 0.6rem;
+    letter-spacing: 0.22em; color: var(--gold); text-transform: uppercase;
+    margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px;
+  }
+  .ctrl-row { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; }
+  .ctrl-label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.6rem; letter-spacing: 0.1em; color: rgba(200,200,220,0.75);
+  }
+  .ctrl-label span.val { color: var(--gold); font-size: 0.58rem; }
+  input[type=range] {
+    -webkit-appearance: none; width: 100%; height: 3px;
+    background: rgba(232,160,32,0.15); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%;
+    background: var(--gold); cursor: pointer; box-shadow: 0 0 6px rgba(232,160,32,0.6);
+  }
+  .toggle-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px; font-size: 0.6rem; letter-spacing: 0.1em;
+    color: rgba(200,200,220,0.75);
+  }
+  .toggle {
+    width: 32px; height: 16px; background: rgba(232,160,32,0.15);
+    border: 1px solid var(--border); border-radius: 8px;
+    cursor: pointer; position: relative; transition: background 0.25s;
+  }
+  .toggle.on { background: rgba(232,160,32,0.4); }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #888; transition: left 0.2s, background 0.2s;
+  }
+  .toggle.on::after { left: 18px; background: var(--gold); }
+
+  /* Video Modal Styles */
+  #video-modal {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 20px; z-index: 50; pointer-events: all;
+    backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+    display: flex; flex-direction: column; gap: 15px;
+    opacity: 1; transition: opacity 0.3s, transform 0.3s;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  }
+  #video-modal.hidden { opacity: 0; pointer-events: none; transform: translate(-50%, -45%); }
+  
+  .modal-header { display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h2 { font-family: 'Orbitron', sans-serif; font-size: 0.9rem; color: var(--gold); letter-spacing: 0.1em; }
+  .close-btn { 
+    background: none; border: none; color: var(--text); font-size: 1.5rem; 
+    cursor: pointer; line-height: 1; transition: color 0.2s;
+  }
+  .close-btn:hover { color: #fff; }
+  
+  /* Make iframe responsive */
+  .video-container { width: 100%; max-width: 712px; aspect-ratio: 712 / 401; }
+  .video-container iframe { width: 100%; height: 100%; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
+
+  #infobar {
+    position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 24px; align-items: center;
+    font-size: 0.58rem; letter-spacing: 0.14em;
+    color: rgba(200,200,220,0.4); pointer-events: none;
+  }
+  #infobar .sep { color: var(--border); }
+  #fps {
+    position: absolute; bottom: 22px; right: 22px;
+    font-size: 0.6rem; color: rgba(232,160,32,0.45); letter-spacing: 0.1em;
+  }
+  #crosshair {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 18px; height: 18px; pointer-events: none; opacity: 0.35;
+  }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: var(--gold);
+  }
+  #crosshair::before { width: 1px; height: 100%; left: 50%; top: 0; }
+  #crosshair::after  { height: 1px; width: 100%; top: 50%; left: 0; }
+
+  @media (max-width: 800px) {
+    #video-modal { width: 90vw; padding: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"><canvas id="c"></canvas></div>
+
+<div id="hud">
+  <div id="title-block">
+    <h1>Schwarzschild Black Hole</h1>
+    <p>Gravitational Lensing · Accretion Disk · Real-Time</p>
+  </div>
+
+  <div id="top-actions">
+    <button id="btn-video" class="action-btn">🎥 WATCH VIDEO</button>
+    <button id="btn-toggle-ui" class="action-btn">⚙ HIDE PARAMETERS</button>
+  </div>
+
+  <div id="controls">
+    <h2>Parameters</h2>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Black Hole Mass <span class="val" id="v-mass">1.0</span></div>
+      <input type="range" id="s-mass" min="0.5" max="3.0" step="0.05" value="0.5" title="Black Hole Mass">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Lensing Strength <span class="val" id="v-lens">1.5</span></div>
+      <input type="range" id="s-lens" min="0.5" max="4.0" step="0.05" value="0.95" title="Lensing Strength">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Disk Temperature (kK) <span class="val" id="v-temp">12</span></div>
+      <input type="range" id="s-temp" min="4" max="30" step="0.5" value="8.5" title="Disk Temperature">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Disk Brightness <span class="val" id="v-bright">1.5</span></div>
+      <input type="range" id="s-bright" min="0.2" max="5.0" step="0.1" value="1.7" title="Disk Brightness">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Doppler Strength <span class="val" id="v-doppler">1.0</span></div>
+      <input type="range" id="s-doppler" min="0.0" max="3.0" step="0.1" value="3.0" title="Doppler Strength">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Rotation Speed <span class="val" id="v-rot">0.3</span></div>
+      <input type="range" id="s-rot" min="0.0" max="25.0" step="0.5" value="2.0" title="Rotation Speed">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Turbulence <span class="val" id="v-turb">0.7</span></div>
+      <input type="range" id="s-turb" min="0.0" max="2.0" step="0.05" value="2.0" title="Turbulence">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Step Size <span class="val" id="v-step">0.45</span></div>
+      <input type="range" id="s-step" min="0.05" max="0.45" step="0.01" value="0.45" title="Step Size">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Star Density <span class="val" id="v-stars">0.6</span></div>
+      <input type="range" id="s-stars" min="0.1" max="1.0" step="0.05" value="0.6" title="Star Density">
+    </div>
+    <div class="toggle-row">Nebula <div class="toggle on" id="t-nebula"></div></div>
+    <div class="toggle-row">Companion Star <div class="toggle on" id="t-companion"></div></div>
+    <div class="toggle-row">Doppler Beaming <div class="toggle on" id="t-doppler"></div></div>
+    <div class="toggle-row">Auto Rotate <div class="toggle" id="t-autorot"></div></div>
+  </div>
+
+  <div id="video-modal" class="hidden">
+    <div class="modal-header">
+      <h2>NASA: Sizes Up the Biggest Black Holes</h2>
+      <button class="close-btn" id="btn-close-video" title="Close Video">&times;</button>
+    </div>
+    <div class="video-container">
+      <iframe src="https://www.youtube.com/embed/8GnSFAZD8YY" title="NASA Animation Sizes Up the Biggest Black Holes" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <div id="infobar">
+    <span>DRAG · Orbit</span><span class="sep">|</span>
+    <span>SCROLL · Zoom</span><span class="sep">|</span>
+    <span>RIGHT DRAG · Pan</span><span class="sep">|</span>
+    <span>DOUBLE CLICK · Reset</span>
+  </div>
+  <div id="fps">-- fps</div>
+  <div id="crosshair"></div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+//  Black Hole Raymarcher  —  WebGL2 / GLSL ES 3.0
+//  Works in Chrome, Firefox, Edge, Safari 15+  (no WebGPU required)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl2', {
+  antialias: false,
+  powerPreference: 'high-performance'
+});
+
+if (!gl) {
+  document.body.innerHTML =
+    '<div style="color:#e8a020;font-family:monospace;text-align:center;padding:80px 20px;">' +
+    '<h2 style="font-size:1.4rem;margin-bottom:16px;">WebGL2 Not Available</h2>' +
+    '<p style="color:#888;max-width:400px;margin:0 auto;line-height:1.7;">' +
+    'Please use Chrome, Firefox, Edge, or Safari 15+.</p></div>';
+  throw new Error('WebGL2 not supported');
+}
+
+// ── UI Logic (Panels & Modals) ────────────────────────────────────────────────
+const btnToggleUi = document.getElementById('btn-toggle-ui');
+const controlsPanel = document.getElementById('controls');
+
+btnToggleUi.addEventListener('click', () => {
+  controlsPanel.classList.toggle('hidden');
+  if(controlsPanel.classList.contains('hidden')) {
+    btnToggleUi.textContent = '⚙ SHOW PARAMETERS';
+  } else {
+    btnToggleUi.textContent = '⚙ HIDE PARAMETERS';
+  }
+});
+
+const btnVideo = document.getElementById('btn-video');
+const videoModal = document.getElementById('video-modal');
+const btnCloseVideo = document.getElementById('btn-close-video');
+const iframe = videoModal.querySelector('iframe');
+const originalIframeSrc = iframe.src;
+
+btnVideo.addEventListener('click', () => {
+  videoModal.classList.remove('hidden');
+});
+
+btnCloseVideo.addEventListener('click', () => {
+  videoModal.classList.add('hidden');
+  // Refresh the iframe source to stop the video from continuing to play out of sight
+  iframe.src = originalIframeSrc; 
+});
+
+// ── Vertex Shader ─────────────────────────────────────────────────────────────
+const VS_SRC = `#version 300 es
+void main() {
+  float x = float((gl_VertexID & 1) << 2) - 1.0;
+  float y = float((gl_VertexID & 2) << 1) - 1.0;
+  gl_Position = vec4(x, y, 0.0, 1.0);
+}`;
+
+// ── Fragment Shader ───────────────────────────────────────────────────────────
+const FS_SRC = `#version 300 es
+precision highp float;
+out vec4 fragColor;
+
+uniform vec2  uRes;
+uniform float uTime;
+uniform float uCamPhi;
+uniform float uCamTheta;
+uniform float uCamDist;
+uniform vec3  uTarget;
+uniform float uMass;
+uniform float uLensing;
+uniform float uStepSize;
+uniform float uDiskTemp;
+uniform float uDiskBright;
+uniform float uDoppler;
+uniform float uRotation;
+uniform float uTurbulence;
+uniform float uStarDensity;
+uniform float uNebulaEn;
+uniform float uCompanionEn;
+uniform float uDopplerEn;
+
+// ── Hash functions ────────────────────────────────────────────────────────────
+float h21(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+vec2 h22(vec2 p) {
+  return vec2(
+    fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453),
+    fract(sin(dot(p, vec2(269.5, 183.3))) * 43758.5453)
+  );
+}
+float h31(vec3 p) {
+  return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+}
+
+// ── 3D Value Noise ────────────────────────────────────────────────────────────
+float noise3(vec3 p) {
+  vec3 ip = floor(p);
+  vec3 fr = fract(p);
+  vec3 uv = fr * fr * (3.0 - 2.0 * fr);
+  float na = h31(ip);
+  float nb = h31(ip + vec3(1,0,0));
+  float nc = h31(ip + vec3(0,1,0));
+  float nd = h31(ip + vec3(1,1,0));
+  float ne = h31(ip + vec3(0,0,1));
+  float nf = h31(ip + vec3(1,0,1));
+  float ng = h31(ip + vec3(0,1,1));
+  float nh = h31(ip + vec3(1,1,1));
+  return mix(
+    mix(mix(na,nb,uv.x), mix(nc,nd,uv.x), uv.y),
+    mix(mix(ne,nf,uv.x), mix(ng,nh,uv.x), uv.y),
+    uv.z
+  );
+}
+
+// ── Fractal Brownian Motion ───────────────────────────────────────────────────
+float fbm(vec3 p, float lac, float per) {
+  float v = 0.0, amp = 0.5;
+  v += noise3(p) * amp; p *= lac; amp *= per;
+  v += noise3(p) * amp; p *= lac; amp *= per;
+  v += noise3(p) * amp; p *= lac; amp *= per;
+  v += noise3(p) * amp;
+  return v;
+}
+
+// ── Blackbody Colour ──────────────────────────────────────────────────────────
+vec3 blackbody(float tempK) {
+  float t = clamp(tempK, 1000.0, 40000.0);
+  float r, g, b;
+  if (t <= 6600.0) {
+    r = 1.0;
+    g = clamp(0.39008 * log(t / 100.0) - 0.63184, 0.0, 1.0);
+    float bRaw = clamp(0.54321 * log(max(t / 100.0 - 10.0, 0.001)) - 1.19625, 0.0, 1.0);
+    b = (t < 2000.0) ? 0.0 : bRaw;
+  } else {
+    r = clamp(1.29294 * pow(t / 6600.0 - 0.8,    -0.13320), 0.0, 1.0);
+    g = clamp(1.12989 * pow(t / 6600.0 - 0.07861, -0.07551), 0.0, 1.0);
+    b = 1.0;
+  }
+  float lum = 0.2126*r + 0.7152*g + 0.0722*b;
+  return mix(vec3(lum), vec3(r, g, b), 1.3);
+}
+
+// ── Star Field ────────────────────────────────────────────────────────────────
+vec3 starField(vec3 rd) {
+  float theta = atan(rd.z, rd.x);
+  float phi   = asin(clamp(rd.y, -1.0, 1.0));
+  vec2  sc    = vec2(theta, phi) * 60.0;
+  vec2  cell  = floor(sc);
+  vec2  cuv   = fract(sc);
+  float prob  = step(1.0 - uStarDensity, h21(cell));
+  vec2  sp    = h22(cell + 42.0) * 0.8 + 0.1;
+  float dst   = length(cuv - sp);
+  float sz    = h21(cell + 100.0) * 0.03 + 0.01;
+  float core  = smoothstep(sz,       0.0, dst);
+  float glow  = smoothstep(sz * 3.0, 0.0, dst) * 0.3;
+  vec3  scol  = mix(vec3(0.8,0.9,1.0), vec3(1.0,0.95,0.8), h21(cell + 200.0));
+  return scol * (core + glow) * prob;
+}
+
+// ── Nebula ────────────────────────────────────────────────────────────────────
+vec3 nebula(vec3 rd) {
+  float n1 = clamp(fbm(rd * 1.8,       2.0, 0.5) * 2.0 - 0.6, 0.0, 1.0);
+  float n2 = clamp(fbm(rd * 3.5 + 5.3, 2.0, 0.5) * 2.0 - 0.8, 0.0, 1.0);
+  return vec3(0.08,0.15,0.40)*n1*0.6 + vec3(0.45,0.08,0.12)*n2*0.4;
+}
+
+// ── Companion Star ───────────────────────
+vec3 companionStar(vec3 rd) {
+  vec3 starDir = normalize(vec3(-0.6, 0.1, -0.8));
+  float dp = dot(rd, starDir);
+  float core = smoothstep(0.997, 0.9995, dp);
+  float corona = smoothstep(0.96, 0.997, dp) * pow(max(0.0, dp), 50.0);
+  vec3 col = vec3(1.0, 0.85, 0.6) * core * 4.0;
+  col += vec3(1.0, 0.4, 0.1) * corona * 1.5;
+  return col;
+}
+
+// ── Accretion Disk ────────────────────────────────────────────────────────────
+vec4 diskColor(float hitR, float hitAngle, vec3 rayDir, float innerR, float outerR) {
+  float normR    = clamp((hitR - innerR) / (outerR - innerR), 0.0, 1.0);
+  float edgeFall = smoothstep(0.0, 0.12, normR) * smoothstep(1.0, 0.85, normR);
+
+  float peakT = uDiskTemp * 1000.0;
+  float tempK = peakT * pow(innerR / max(hitR, innerR), 0.75);
+  vec3  col   = blackbody(tempK) * uDiskBright;
+
+  float cycLen = 12.0;
+  float cTime  = mod(uTime, cycLen);
+  float blend  = cTime / cycLen;
+  float kep1   = cTime       * uRotation / pow(hitR, 1.5);
+  float kep2   = (cTime + cycLen) * uRotation / pow(hitR, 1.5);
+  vec3  nc1    = vec3(hitR * uTurbulence, cos(hitAngle + kep1) * 0.25, sin(hitAngle + kep1) * 0.25);
+  vec3  nc2    = vec3(hitR * uTurbulence, cos(hitAngle + kep2) * 0.25, sin(hitAngle + kep2) * 0.25);
+  float tb     = mix(fbm(nc2, 2.1, 0.5), fbm(nc1, 2.1, 0.5), blend);
+  float ring   = pow(clamp(tb, 0.0, 1.0), 1.8);
+  col *= (0.4 + 0.6 * ring);
+
+  float rotSign = sign(uRotation);
+  vec3  velDir  = vec3(-sin(hitAngle) * rotSign, 0.0, cos(hitAngle) * rotSign);
+  float beta    = (1.0 / sqrt(hitR / innerR)) * 0.35;
+  float df      = 1.0 / max(1.0 - beta * dot(velDir, rayDir), 0.01);
+  float dBoost  = (uDopplerEn > 0.5) ? clamp(pow(df, 3.0 * uDoppler), 0.1, 6.0) : 1.0;
+  col *= dBoost;
+
+  col += blackbody(peakT * 1.5) * smoothstep(innerR + 1.0, innerR, hitR) * 0.9;
+
+  return vec4(col, edgeFall * clamp(ring * 1.4, 0.0, 1.0));
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+void main() {
+  vec2 uv = (gl_FragCoord.xy / uRes - 0.5) * 2.0;
+  vec2 sp = vec2(uv.x * (uRes.x / uRes.y), uv.y);
+
+  vec3 camPos = vec3(
+    uCamDist * cos(uCamPhi) * cos(uCamTheta),
+    uCamDist * sin(uCamPhi),
+    uCamDist * cos(uCamPhi) * sin(uCamTheta)
+  );
+  vec3 fwd    = normalize(uTarget - camPos);
+  vec3 rgt    = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
+  vec3 upv    = cross(fwd, rgt);
+  vec3 rayDir = normalize(fwd + rgt * sp.x + upv * sp.y);
+
+  float rs     = uMass * 2.0;
+  float innerR = max(rs * 1.6, 3.0);
+  float outerR = innerR + 12.0;
+
+  vec3  rayPos  = camPos;
+  vec3  prevPos = camPos;
+  vec3  color   = vec3(0.0);
+  float alpha   = 0.0;
+  bool  captured = false;
+  bool  escaped  = false;
+
+  for (int i = 0; i < 96; i++) {
+    float r = length(rayPos);
+
+    if (r < rs * 1.01) { captured = true; break; }
+    if (r > 120.0)     { escaped  = true; break; }
+
+    if (prevPos.y * rayPos.y < 0.0) {
+      float tHit = -prevPos.y / (rayPos.y - prevPos.y);
+      vec3  hPos = prevPos + tHit * (rayPos - prevPos);
+      float hitR = length(hPos.xz);
+      if (hitR > innerR && hitR < outerR) {
+        vec4  dc  = diskColor(hitR, atan(hPos.z, hPos.x), rayDir, innerR, outerR);
+        float rem = 1.0 - alpha;
+        color += dc.rgb * dc.a * rem;
+        alpha += rem * dc.a;
+        if (alpha > 0.99) { escaped = false; break; }
+      }
+    }
+
+    vec3  toCenter = -rayPos / r;
+    float bend     = rs / (r * r) * uStepSize * uLensing;
+    rayDir = normalize(rayDir + toCenter * bend);
+
+    prevPos = rayPos;
+    rayPos += rayDir * uStepSize;
+  }
+
+  if (escaped) {
+    float rem = 1.0 - alpha;
+    vec3  bg  = starField(rayDir) * 1.2;
+    if (uNebulaEn > 0.5) bg += nebula(rayDir);
+    if (uCompanionEn > 0.5) bg += companionStar(rayDir);
+    color += bg * rem;
+  }
+
+  color *= 1.0 - dot(uv, uv) * 0.12;
+
+  color = clamp(
+    (color * (2.51 * color + 0.03)) /
+    (color * (2.43 * color + 0.59) + 0.14),
+    0.0, 1.0
+  );
+
+  fragColor = vec4(pow(color, vec3(1.0 / 2.2)), 1.0);
+}`;
+
+// ── Compile & Link ────────────────────────────────────────────────────────────
+function compileShader(type, src) {
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(sh);
+    gl.deleteShader(sh);
+    throw new Error('Shader compile error:\n' + log);
+  }
+  return sh;
+}
+
+const prog = gl.createProgram();
+gl.attachShader(prog, compileShader(gl.VERTEX_SHADER,   VS_SRC));
+gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, FS_SRC));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
+  throw new Error('Program link error:\n' + gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+
+// ── Uniform locations ─────────────────────────────────────────────────────────
+const U = {};
+[
+  'uRes','uTime','uCamPhi','uCamTheta','uCamDist','uTarget',
+  'uMass','uLensing','uStepSize','uDiskTemp','uDiskBright',
+  'uDoppler','uRotation','uTurbulence','uStarDensity','uNebulaEn','uCompanionEn','uDopplerEn'
+].forEach(n => { U[n] = gl.getUniformLocation(prog, n); });
+
+// ── Simulation State ──────────────────────────────────────────────────────────
+const S = {
+  time: 0,
+  phi: 0.35,  theta: 0.6,  dist: 24,
+  tPhi: 0.35, tTheta: 0.6, tDist: 24,
+  tx: 0, ty: 0, tz: 0,
+  mass: 1.0, lensing: 0.85, stepSize: 0.45,
+  diskTemp: 12, diskBright: 1.5, doppler: 1.0,
+  rotation: 25.0, turbulence: 0.7, starDensity: 0.6,
+  nebulaEn: 1, companionEn: 1, dopplerEn: 1, autoRot: 0,
+  drag: false, rDrag: false, lx: 0, ly: 0,
+  prevTs: performance.now(), frames: 0, fpsAcc: 0
+};
+
+// ── Resize ────────────────────────────────────────────────────────────────────
+function resize() {
+  canvas.width  = Math.floor(window.innerWidth  * devicePixelRatio);
+  canvas.height = Math.floor(window.innerHeight * devicePixelRatio);
+  gl.viewport(0, 0, canvas.width, canvas.height);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Mouse orbit / zoom / pan ──────────────────────────────────────────────────
+canvas.addEventListener('mousedown', e => {
+  if (e.target !== canvas) return;
+  if (e.button === 2) S.rDrag = true; else S.drag = true;
+  S.lx = e.clientX; S.ly = e.clientY;
+});
+window.addEventListener('mouseup', () => { S.drag = false; S.rDrag = false; });
+window.addEventListener('mousemove', e => {
+  const dx = e.clientX - S.lx, dy = e.clientY - S.ly;
+  S.lx = e.clientX; S.ly = e.clientY;
+  if (S.drag) {
+    S.tTheta -= dx * 0.008;
+    S.tPhi = Math.max(-1.45, Math.min(1.45, S.tPhi + dy * 0.006));
+  }
+  if (S.rDrag) {
+    const fwd = [
+      Math.cos(S.phi) * Math.cos(S.theta),
+      Math.sin(S.phi),
+      Math.cos(S.phi) * Math.sin(S.theta)
+    ];
+    const r   = norm3(cross3([0,1,0], fwd));
+    const upv = cross3(fwd, r);
+    const spd = S.dist * 0.001;
+    S.tx += (-r[0]*dx + upv[0]*dy) * spd;
+    S.ty += (-r[1]*dx + upv[1]*dy) * spd;
+    S.tz += (-r[2]*dx + upv[2]*dy) * spd;
+  }
+});
+canvas.addEventListener('wheel', e => {
+  if (e.target !== canvas) return;
+  e.preventDefault();
+  S.tDist = Math.max(5, Math.min(80, S.tDist + e.deltaY * 0.04));
+}, { passive: false });
+canvas.addEventListener('dblclick', (e) => {
+  if (e.target !== canvas) return;
+  S.tPhi = 0.35; S.tTheta = 0.6; S.tDist = 24;
+  S.tx = 0; S.ty = 0; S.tz = 0;
+});
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// ── Touch controls ────────────────────────────────────────────────────────────
+const touches = {};
+let lastPinch = 0;
+canvas.addEventListener('touchstart', e => {
+  if (e.target === canvas) e.preventDefault();
+  [...e.touches].forEach(t => touches[t.identifier] = { x: t.clientX, y: t.clientY });
+  if (e.touches.length === 2) {
+    const [a, b] = e.touches;
+    lastPinch = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+  }
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  if (e.target === canvas) e.preventDefault();
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    const prev = touches[t.identifier] || { x: t.clientX, y: t.clientY };
+    S.tTheta -= (t.clientX - prev.x) * 0.008;
+    S.tPhi = Math.max(-1.45, Math.min(1.45, S.tPhi + (t.clientY - prev.y) * 0.006));
+    touches[t.identifier] = { x: t.clientX, y: t.clientY };
+  }
+  if (e.touches.length === 2) {
+    const [a, b] = e.touches;
+    const d = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+    S.tDist = Math.max(5, Math.min(80, S.tDist - (d - lastPinch) * 0.1));
+    lastPinch = d;
+  }
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  [...e.changedTouches].forEach(t => delete touches[t.identifier]);
+});
+
+// ── UI Bindings ───────────────────────────────────────────────────────────────
+function bind(id, key, valId) {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    S[key] = parseFloat(el.value);
+    document.getElementById(valId).textContent = el.value;
+  });
+}
+bind('s-mass',    'mass',        'v-mass');
+bind('s-lens',    'lensing',     'v-lens');
+bind('s-temp',    'diskTemp',    'v-temp');
+bind('s-bright',  'diskBright',  'v-bright');
+bind('s-doppler', 'doppler',     'v-doppler');
+bind('s-rot',     'rotation',    'v-rot');
+bind('s-turb',    'turbulence',  'v-turb');
+bind('s-step',    'stepSize',    'v-step');
+bind('s-stars',   'starDensity', 'v-stars');
+
+function tog(id, key) {
+  const el = document.getElementById(id);
+  el.addEventListener('click', () => {
+    S[key] = S[key] > 0.5 ? 0 : 1;
+    el.classList.toggle('on', S[key] > 0.5);
+  });
+}
+tog('t-nebula',    'nebulaEn');
+tog('t-companion', 'companionEn');
+tog('t-doppler',   'dopplerEn');
+tog('t-autorot',   'autoRot');
+
+// ── Render Loop ───────────────────────────────────────────────────────────────
+const lerp = (a, b, t) => a + (b - a) * t;
+
+function frame(ts) {
+  const dt = Math.min((ts - S.prevTs) / 1000, 0.05);
+  S.prevTs = ts;
+  S.time  += dt;
+
+  S.phi   = lerp(S.phi,   S.tPhi,   0.1);
+  S.theta = lerp(S.theta, S.tTheta, 0.1);
+  S.dist  = lerp(S.dist,  S.tDist,  0.1);
+  if (S.autoRot > 0.5) S.tTheta += dt * 0.12;
+
+  S.frames++; S.fpsAcc += dt;
+  if (S.fpsAcc >= 0.5) {
+    document.getElementById('fps').textContent =
+      Math.round(S.frames / S.fpsAcc) + ' fps';
+    S.frames = 0; S.fpsAcc = 0;
+  }
+
+  gl.uniform2f(U.uRes,          canvas.width, canvas.height);
+  gl.uniform1f(U.uTime,         S.time);
+  gl.uniform1f(U.uCamPhi,       S.phi);
+  gl.uniform1f(U.uCamTheta,     S.theta);
+  gl.uniform1f(U.uCamDist,      S.dist);
+  gl.uniform3f(U.uTarget,       S.tx, S.ty, S.tz);
+  gl.uniform1f(U.uMass,         S.mass);
+  gl.uniform1f(U.uLensing,      S.lensing);
+  gl.uniform1f(U.uStepSize,     S.stepSize);
+  gl.uniform1f(U.uDiskTemp,     S.diskTemp);
+  gl.uniform1f(U.uDiskBright,   S.diskBright);
+  gl.uniform1f(U.uDoppler,      S.doppler);
+  gl.uniform1f(U.uRotation,     S.rotation);
+  gl.uniform1f(U.uTurbulence,   S.turbulence);
+  gl.uniform1f(U.uStarDensity,  S.starDensity);
+  gl.uniform1f(U.uNebulaEn,     S.nebulaEn);
+  gl.uniform1f(U.uCompanionEn,  S.companionEn);
+  gl.uniform1f(U.uDopplerEn,    S.dopplerEn);
+
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+function cross3(a, b) {
+  return [
+    a[1]*b[2] - a[2]*b[1],
+    a[2]*b[0] - a[0]*b[2],
+    a[0]*b[1] - a[1]*b[0]
+  ];
+}
+function norm3(v) {
+  const l = Math.hypot(...v);
+  return v.map(x => x / l);
+}
+</script>
+</body>
+</html>

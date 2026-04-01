@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aditya — Professional Universe Debugger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg:#05050a; --bg2:#0b0b12; --bg3:#101018;
+      --green:#39FF14; --g10:rgba(57,255,20,0.10); --g20:rgba(57,255,20,0.20); --g40:rgba(57,255,20,0.40);
+      --text:#dddde8; --tdim:#4e4e62; --tmid:#9090a2;
+      --bdr:rgba(57,255,20,0.12); --bdrb:rgba(57,255,20,0.32);
+      --mono:'JetBrains Mono',monospace; --body:'Outfit',sans-serif; --disp:'Syne',sans-serif;
+    }
+
+    .pttl:hover{
+        color: skyblue;
+        cursor: pointer;
+        font-style: italic;
+    }
+
+    html{scroll-behavior:smooth;}
+    body{background:var(--bg);color:var(--text);font-family:var(--body);cursor:none;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+
+    /* CURSOR */
+    /* ── EPIC CURSOR CSS ── */
+    #cursor-dot {
+      position: fixed; width: 6px; height: 6px; background: var(--green);
+      border-radius: 50%; pointer-events: none; z-index: 99999;
+      transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s;
+    }
+    #cursor-ring {
+      position: fixed; width: 30px; height: 30px; border: 1.5px solid var(--g40);
+      border-radius: 50%; pointer-events: none; z-index: 99998;
+      transform: translate(-50%, -50%); transition: width 0.3s, height 0.3s, border-color 0.3s;
+    }
+    #cursor-text {
+      position: fixed; font-family: var(--mono); font-size: 11px; font-weight: 600;
+      color: var(--green); pointer-events: none; z-index: 99999;
+      margin-left: 24px; margin-top: 12px; opacity: 0; transition: opacity 0.2s;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+    /* Hover & Click States */
+    body.cursor-hover #cursor-dot { width: 10px; height: 10px; }
+    body.cursor-hover #cursor-ring { width: 48px; height: 48px; border-color: var(--green) !important; }
+    body.cursor-click #cursor-dot { width: 4px; height: 4px; }
+    body.cursor-click #cursor-ring { width: 40px; height: 40px; }
+
+    /* CANVAS */
+    #cnv{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.55;}
+
+    /* SPLASH */
+    #splash{position:fixed;inset:0;background:#000;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;}
+    #st{width:100%;max-width:640px;font-family:var(--mono);font-size:13px;line-height:1.9;}
+    .sl{display:block;opacity:0;color:#777;}
+    .sl.g{color:var(--green);}.sl.r{color:#ff4b4b;}.sl.y{color:#ffd14d;}
+    .sl.on{opacity:1;}
+    #sb{width:100%;max-width:640px;height:2px;background:#111;margin-top:28px;opacity:0;border-radius:2px;overflow:hidden;transition:opacity .4s;}
+    #sf{height:100%;width:0;background:var(--green);box-shadow:0 0 14px var(--green);transition:width 1.6s cubic-bezier(.4,0,.2,1);}
+    #se{margin-top:28px;font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--green);border:1px solid var(--bdrb);background:transparent;padding:12px 36px;cursor:none;opacity:0;transition:opacity .5s,background .3s,box-shadow .3s;}
+    #se:hover, #se:focus {background:var(--g10);box-shadow:0 0 24px var(--g10); outline:none;}
+    #se.on{opacity:1;}
+
+    /* NAV */
+    #nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:22px 52px;display:flex;align-items:center;justify-content:space-between;transition:background .3s,backdrop-filter .3s,border-color .3s;border-bottom:1px solid transparent;}
+    #nav.sc{background:rgba(5,5,10,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter: blur();border-color:var(--bdr);}
+    #nl{font-family:var(--mono);font-size:18px;color:var(--green);cursor:pointer;}
+    #nls{display:flex;gap:36px;list-style:none;}
+    .nli{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tmid);cursor:pointer;position:relative;transition:color .2s;}
+    .nli::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:1px;background:var(--green);transition:width .3s;}
+    .nli:hover,.nli.act{color:var(--green);}
+    .nli.act::after,.nli:hover::after{width:100%;}
+
+    /* PAGES */
+    .page{display:none;min-height:100vh;position:relative;z-index:1;}
+    .page.act{display:block;animation:pgi .5s ease both;}
+    @keyframes pgi{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+    /* REVEAL */
+    .rv{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease;}
+    .rv.vs{opacity:1;transform:none;}
+
+    /* HERO */
+    #hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 24px 60px;}
+    .htag{font-family:var(--mono);font-size:11px;letter-spacing:.26em;color:var(--green);text-transform:uppercase;margin-bottom:24px;opacity:.75;}
+    .hname{font-family:var(--disp);font-size:clamp(76px,14vw,188px);font-weight:800;line-height:.88;letter-spacing:-.035em;margin-bottom:28px;}
+    .hname em{color:var(--green);font-style:normal;text-shadow:0 0 70px rgba(57,255,20,.38);}
+    #tgw{font-family:var(--mono);font-size:clamp(12px,2vw,15px);color:var(--tmid);height:22px;overflow:hidden;margin-bottom:52px;}
+    #tgt{transition:opacity .4s,transform .4s;}
+    .hcta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
+    .btn{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:13px 28px;cursor:pointer;border:none;transition:all .3s;}
+    .bp{background:var(--green);color:#000;font-weight:600;}
+    .bp:hover{box-shadow:0 0 32px rgba(57,255,20,.5);transform:translateY(-2px);}
+    .bo{background:transparent;color:var(--green);border:1px solid var(--bdrb);}
+    .bo:hover{background:var(--g10);box-shadow:0 0 22px var(--g10);transform:translateY(-2px);}
+    .shi{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--tdim);text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:8px;}
+    .shl{width:1px;height:40px;background:linear-gradient(to bottom,var(--green),transparent);animation:sp 2s ease infinite;}
+    @keyframes sp{0%,100%{opacity:.2}50%{opacity:1}}
+
+    /* SHARED */
+    .sec{padding:100px 52px;max-width:1240px;margin:0 auto;}
+    .slbl{font-family:var(--mono);font-size:11px;letter-spacing:.26em;color:var(--green);text-transform:uppercase;margin-bottom:14px;opacity:.8;}
+    .stit{font-family:var(--disp);font-size:clamp(36px,5.5vw,68px);font-weight:800;line-height:1;letter-spacing:-.025em;margin-bottom:48px;}
+    .dvl{width:56px;height:1px;background:var(--bdrb);margin:0 auto 80px;}
+
+    h6{
+  margin-left:600px;
+  position: relative;
+  
+}
+
+    /* HOME CARDS */
+    .ct:hover{color:skyblue;cursor:pointer;font-style:italic;}
+    .pgr{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;}
+    .pc{background:var(--bg2);border:1px solid var(--bdr);padding:36px;cursor:pointer;position:relative;overflow:hidden;transition:border-color .3s,transform .3s;}
+    .pc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--green);transform:scaleX(0);transform-origin:left;transition:transform .4s ease;}
+    .pc:hover{border-color:var(--bdrb);transform:translateY(-4px);}
+    .pc:hover::before{transform:scaleX(1);}
+    .cn{font-family:var(--mono);font-size:11px;color:var(--green);margin-bottom:18px;opacity:.7;}
+    .ct{font-family:var(--disp);font-size:22px;font-weight:700;margin-bottom:10px;}
+    .cd{font-size:14px;color:var(--tmid);line-height:1.65;margin-bottom:22px;}
+    .cl{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
+    .cl::after{content:'→';transition:transform .2s;}
+    .pc:hover .cl::after{transform:translateX(4px);}
+
+    /* PAGE HEADER */
+    .ph{padding:160px 52px 72px;max-width:1240px;margin:0 auto;}
+    .ph .stit{font-size:clamp(52px,9vw,104px);}
+    .ph p{font-size:15px;color:var(--tmid);max-width:520px;line-height:1.75;margin-top:14px;}
+
+    /* PROJECTS */
+    .pgr2{padding:0 52px 120px;max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:22px;}
+    .prj{background:var(--bg2);border:1px solid var(--bdr);padding:40px;transition:all .3s;position:relative;overflow:hidden;}
+    .prj::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(57,255,20,.06),transparent 70%);opacity:0;transition:opacity .4s;}
+    .prj:hover{border-color:var(--bdrb);transform:translateY(-4px);}
+    .prj:hover::after{opacity:1;}
+    .ptg{font-family:var(--mono);font-size:10px;letter-spacing:.15em;color:var(--green);text-transform:uppercase;margin-bottom:14px;opacity:.7;}
+    .pttl{font-family:var(--disp);font-size:21px;font-weight:700;margin-bottom:12px;line-height:1.2;}
+    .pdsc{font-size:14px;color:var(--tmid);line-height:1.65;margin-bottom:26px;}
+    .tch{display:flex;gap:8px;flex-wrap:wrap;}
+    .tt{font-family:var(--mono);font-size:10px;padding:3px 9px;border:1px solid var(--bdr);color:var(--tdim);letter-spacing:.06em;}
+
+    /* BLOG */
+    .bls{padding:0 52px 120px;max-width:800px;margin:0 auto;}
+    .bpv{border-bottom:1px solid var(--bdr);padding:48px 0;cursor:pointer;transition:padding-left .3s;}
+    .bpv:hover{padding-left:14px;}
+    .bdt{font-family:var(--mono);font-size:11px;color:var(--tdim);letter-spacing:.1em;margin-bottom:12px;}
+    .bttl{font-family:var(--disp);font-size:clamp(22px,3vw,30px);font-weight:700;line-height:1.2;margin-bottom:12px;transition:color .2s;}
+    .bpv:hover .bttl{color:var(--green);}
+    .bexc{font-size:14px;color:var(--tmid);line-height:1.7;margin-bottom:14px;}
+    .brm{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:.1em;text-transform:uppercase;}
+    #bpfv{display:none;padding:160px 52px 120px;max-width:740px;margin:0 auto;}
+    #bpfv.act{display:block;}
+    .pbk{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:.12em;text-transform:uppercase;cursor:pointer;margin-bottom:48px;display:inline-flex;align-items:center;gap:8px;}
+    .pbdy{font-size:16px;line-height:1.85;color:var(--text);}
+    .pbdy p{margin-bottom:20px;}
+    .pbdy h2{font-family:var(--disp);font-size:26px;font-weight:700;margin:44px 0 18px;}
+    .pbdy code{font-family:var(--mono);font-size:13px;background:var(--bg3);border:1px solid var(--bdr);padding:2px 7px;color:var(--green);}
+
+    /* ABOUT */
+    .aly{padding:0 52px 120px;max-width:1240px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start;}
+    @media(max-width:768px){.aly{grid-template-columns:1fr;gap:48px;}}
+    .abio{font-size:15px;line-height:1.85;color:var(--tmid);}
+    .abio p{margin-bottom:18px;}
+    .abio strong{color:var(--text);font-weight:600;}
+    .abio em{color:var(--green);font-style:normal;}
+    .skr{margin-bottom:22px;}
+    .skh{display:flex;justify-content:space-between;margin-bottom:7px;}
+    .skn{font-family:var(--mono);font-size:12px;color:var(--tmid);letter-spacing:.06em;}
+    .sknm{font-family:var(--mono);font-size:10px;color:var(--tdim);}
+    .skb{height:2px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+    .skf{height:100%;background:var(--green);box-shadow:0 0 8px rgba(57,255,20,.5);width:0;transition:width 1.5s cubic-bezier(.4,0,.2,1);border-radius:2px;}
+    .fcts{margin-top:44px;}
+    .fct{display:flex;gap:14px;margin-bottom:18px;align-items:flex-start;}
+    .fi{font-family:var(--mono);font-size:12px;color:var(--green);width:18px;flex-shrink:0;margin-top:2px;}
+    .ft{font-size:14px;color:var(--tmid);line-height:1.65;}
+    .ik{font-family:var(--mono);color:var(--green);font-size:12px;}
+
+    /* CONTACT */
+    .cly{padding:0 52px 120px;max-width:800px;margin:0 auto;}
+    .cin{font-size:15px;color:var(--tmid);line-height:1.85;margin-bottom:56px;}
+    .cfm{display:flex;flex-direction:column;gap:22px;}
+    .fg{display:flex;flex-direction:column;gap:7px;}
+    .fl{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--tdim);text-transform:uppercase;}
+    .fi2,.fta{background:var(--bg2);border:1px solid var(--bdr);color:var(--text);font-family:var(--body);font-size:15px;padding:13px 16px;outline:none;width:100%;transition:border-color .3s,box-shadow .3s;}
+    .fi2:focus,.fta:focus{border-color:var(--bdrb);box-shadow:0 0 18px var(--g10);}
+    .fta{resize:vertical;min-height:155px;}
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--bdr);padding:36px 52px;display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;}
+    .ftr{font-family:var(--mono);font-size:11px;color:var(--tdim);line-height:1.7;}
+
+    /* ERROR POPUP */
+    #erp{position:fixed;bottom:24px;right:24px;width:360px;background:var(--bg3);border:1px solid #ff4b4b;z-index:5000;opacity:0;transform:translateY(18px);transition:opacity .4s,transform .4s;pointer-events:none;}
+    #erp.vis{opacity:1;transform:none;pointer-events:all;}
+    .erh{background:#b03030;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;}
+    .erh span{font-family:var(--mono);font-size:11px;color:#fff;letter-spacing:.06em;}
+    .erx{font-family:var(--mono);font-size:13px;color:#fff;cursor:pointer;background:none;border:none;line-height:1;}
+    .erb{padding:18px;}
+    .ert{font-family:var(--mono);font-size:12px;color:#ff6e6e;margin-bottom:6px;}
+    .erm{font-family:var(--mono);font-size:11px;color:var(--tmid);line-height:1.7;margin-bottom:14px;white-space:pre-line;}
+    .ers{font-family:var(--mono);font-size:10px;color:var(--tdim);line-height:1.9;white-space:pre-line;}
+    .era{display:flex;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid var(--bg2);}
+    .ebtn{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:7px 14px;cursor:pointer;border:1px solid var(--bdr);background:transparent;color:var(--tmid);transition:all .2s;}
+    .ebtn:hover{border-color:var(--bdrb);color:var(--text);}
+    .ebtn.red{border-color:#ff4b4b;color:#ff4b4b;}
+    .ebtn.red:hover{background:rgba(255,75,75,.1);}
+    .g{color:var(--green);}
+
+    @media(max-width:600px){
+      #nav{padding:18px 20px;} #nls{gap:16px;} .nli{font-size:10px;}
+      .sec,.ph,.pgr2,.bls,.aly,.cly{padding-left:20px;padding-right:20px;}
+      footer{flex-direction:column;gap:10px;text-align:center;}
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="cursor-canvas" style="position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99997;"></canvas>
+<div id="cursor-dot" style="position: fixed; width: 6px; height: 6px; background: white; border-radius: 50%; pointer-events: none; z-index: 99999; transform: translate(-50%, -50%);"></div>
+<div id="cursor-ring" style="position: fixed; width: 30px; height: 30px; border: 1.5px solid white; border-radius: 50%; pointer-events: none; z-index: 99998; transform: translate(-50%, -50%);"></div>
+<div id="cursor-text" style="position: fixed; font-family: var(--mono); font-size: 10px; color: var(--green); pointer-events: none; z-index: 99999; margin-left: 20px; margin-top: 10px; opacity: 0; transition: opacity 0.2s;"></div>
+<canvas id="cnv"></canvas>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div id="st"></div>
+  <div id="sb"><div id="sf"></div></div>
+  <button id="se">[ ENTER SITE ]</button>
+</div>
+
+<!-- NAV -->
+<nav id="nav">
+  <div id="nl" onclick="go('home')">A/</div>
+  <ul id="nls">
+    <li class="nli act" data-p="home"     onclick="go('home')">Home</li>
+    <li class="nli"     data-p="projects" onclick="go('projects')">Projects</li>
+    <li class="nli"     data-p="blog"     onclick="go('blog')">Blog</li>
+    <li class="nli"     data-p="about"    onclick="go('about')">About</li>
+    <li class="nli"     data-p="contact"  onclick="go('contact')">Contact</li>
+  </ul>
+</nav>
+
+<!-- ██ HOME ██ -->
+<div class="page act" id="home">
+  <section id="hero">
+    <div class="htag">&gt; booting portfolio.exe — please hold</div>
+    <h1 class="hname">ADI<em>TYA</em></h1>
+    <div id="tgw"><div id="tgt"></div></div>
+    <div class="hcta">
+      <button class="btn bp" onclick="go('projects')">View Projects</button>
+      <button class="btn bo" onclick="go('contact')">Get in Touch</button>
+    </div>
+    <div class="shi"><span>Scroll</span><div class="shl"></div></div>
+  </section>
+
+  <section class="sec">
+    <div class="rv"><div class="slbl">&gt; latest projects</div>
+    <h2 class="stit">Things I Built<br>(mostly on purpose)</h2></div>
+    <div class="pgr rv">
+      <div class="pc" onclick="go('projects')">
+        <div class="cn">01 — Quantum</div><div class="ct" onclick="window.location.href='pages/quantum_sim.html'; event.stopPropagation();">Quantum State Simulator</div>
+        <div class="cd">Simulates superposition &amp; entanglement. Results may or may not be correct. Schrödinger couldn't tell either.</div>
+        <div class="cl">Explore</div>
+      </div>
+      <div class="pc" onclick="go('projects')">
+        <div class="cn">02 — Robotics</div><div class="ct" onclick="window.location.href='pages/roboarm.html'">Autonomous Robot Arm</div>
+        <div class="cd">Designed to pick and place objects. Currently picks up objects and gently <span class="g">flings</span> them. Progress, arguably.</div>
+        <div class="cl">Explore</div>
+      </div>
+      <div class="pc" onclick="go('projects')">
+        <div class="cn">03 — AI / ML</div><div class="ct" onclick="window.location.href='pages/neunet.html'">Neural Net from Scratch</div>
+        <div class="cd">No PyTorch. No TensorFlow. Just NumPy, pain, and the audacity to backpropagate manually.</div>
+        <div class="cl">Explore</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="dvl"></div>
+
+  <section class="sec" style="padding-top:0">
+    <div class="rv"><div class="slbl">&gt; from the blog</div>
+    <h2 class="stit">Documented<br>Disasters</h2></div>
+    <div class="pgr rv">
+      <div class="pc" onclick="openPost(0)">
+        <div class="cn">Latest Post</div><div class="ct">3 Hours, 47 Tabs, One Python Sin</div>
+        <div class="cd">The true story of how <span class="ik">output(x)</span> stole 3 hours of my life. A tragedy. A lesson. A war crime.</div>
+        <div class="cl">Read Post</div>
+      </div>
+      <div class="pc" onclick="go('blog')">
+        <div class="cn">All Posts</div><div class="ct">More Suffering<br>Available Here</div>
+        <div class="cd">Physics, code, and the occasional existential spiral at 2am. Come for the bugs, stay for the despair.</div>
+        <div class="cl">Browse Blog</div>
+      </div>
+    </div>
+  </section>
+  <section>
+    
+  </section>
+
+  <footer>
+    <div class="ftr">Aditya Pratap Singh<br><span style="color:#252530">© No rights reserved. Everything here was Googled, Stack Overflowed, and vibes-coded into existence.</span></div>
+    <div class="ftr" style="text-align:right">Built with confusion &amp; caffeine.<br><span style="color:#252530">If it breaks, it's a feature.</span></div>
+  </footer>
+</div>
+
+<!-- ██ PROJECTS ██ -->
+<div class="page" id="projects">
+  <div class="ph">
+    <div class="slbl rv">&gt; projects</div>
+    <h1 class="stit rv">Stuff I Made<br><span class="g">Work*</span></h1>
+    <p class="rv">*Your definition of "work" may vary. These definitely compile. Most of the time.</p>
+  </div>
+  <div class="pgr2">
+    <div class="prj rv" onclick="window.location.href='pages/quantum_sim.html'"><div class="ptg">Quantum Physics</div><div class="pttl">Quantum State Simulator</div>
+      <div class="pdsc">A Python simulation of quantum superposition, entanglement, and measurement collapse. Now I can confuse myself with both code AND mathematics simultaneously. An achievement.</div>
+      <div class="tch"><span class="tt">Python</span><span class="tt">NumPy</span><span class="tt">Matplotlib</span></div></div>
+    <div class="prj rv" onclick="window.location.href='pages/roboarm.html'"><div class="ptg">Robotics</div><div class="pttl">Autonomous Robot Arm</div>
+      <div class="pdsc">Designed, built, and programmed a 3-DOF robot arm with inverse kinematics. Achieves ±2mm precision. Or throws things. Depends on its mood, frankly.</div>
+      <div class="tch"><span class="tt">C++</span><span class="tt">Arduino</span><span class="tt">Inv. Kinematics</span></div></div>
+    <div class="prj rv" onclick="window.location.href='pages/neunet.html'"><div class="ptg">Machine Learning</div><div class="pttl">Neural Network from Scratch</div>
+      <div class="pdsc">No PyTorch. No TensorFlow. Just NumPy, pain, and the sheer audacity to backpropagate by hand. 92% MNIST accuracy. My confidence: considerably lower.</div>
+      <div class="tch"><span class="tt">Python</span><span class="tt">NumPy</span><span class="tt">Math (sadly)</span></div></div>
+    <div class="prj rv" onclick="window.location.href='pages/stellar_sim.html'"><div class="ptg">Astrophysics</div><div class="pttl">Stellar Object Visualizer</div>
+      <div class="pdsc">Interactive, scientifically-accurate 3D visualization of stellar phenomena — including Black Holes, Pulsars, and Main Sequence stars, featuring relativistic effects.</div>
+      <div class="tch"><span class="tt">Three.js</span><span class="tt">WebGL</span><span class="tt">GLSL</span></div></div>
+    <div class="prj rv"><div class="ptg">Quantum Computing</div><div class="pttl">Quantum Gates Playground</div>
+      <div class="pdsc">Interactive web app for visualizing quantum gate operations on a Bloch sphere. Great for learning. Also great for staring into the void with a sense of purpose.</div>
+      <div class="tch"><span class="tt">JavaScript</span><span class="tt">Qiskit.js</span><span class="tt">WebGL</span></div></div>
+    <div class="prj rv" style="border-style:dashed;opacity:.5"><div class="ptg">In Progress</div><div class="pttl">???</div>
+      <div class="pdsc">Something is being built. May involve quantum mechanics, a robot, and a regrettable variable name. Updates when it doesn't immediately crash.</div>
+      <div class="tch"><span class="tt">TBD</span><span class="tt">Caffeine</span><span class="tt">Hubris</span></div></div>
+  </div>
+  <footer>
+    <div class="ftr">Aditya Pratap Singh<br><span style="color:#252530">© No rights reserved. Steal freely, attribute never.</span></div>
+    <div class="ftr" style="text-align:right"><span style="color:#252530">All projects tested in production. Many regrets.</span></div>
+  </footer>
+</div>
+
+<!-- ██ BLOG ██ -->
+<div class="page" id="blog">
+  <div id="blv">
+    <div class="ph">
+      <div class="slbl rv">&gt; blog</div>
+      <h1 class="stit rv">Thoughts &amp;<br><span class="g">Tragedies</span></h1>
+      <p class="rv">Incoherent musings from someone who spent 3 hours debugging a typo. You're in capable hands. Relatively.</p>
+    </div>
+    <div class="bls">
+      <div class="bpv rv" onclick="openPost(0)">
+        <div class="bdt">MARCH 2025 &nbsp;—&nbsp; 6 MIN READ &nbsp;—&nbsp; TRAGEDY</div>
+        <div class="bttl">3 Hours, 47 Google Tabs, and One Python Sin</div>
+        <div class="bexc">The day I discovered that output(x) is not a Python function. The day my confidence died. The day I became a better person. (I did not become a better person.)</div>
+        <div class="brm">Read More →</div>
+      </div>
+      <div class="bpv rv" onclick="openPost(1)">
+        <div class="bdt">FEBRUARY 2025 &nbsp;—&nbsp; 8 MIN READ &nbsp;—&nbsp; EXISTENTIAL</div>
+        <div class="bttl">Why Quantum Mechanics Will Break Your Brain (And Career Choices)</div>
+        <div class="bexc">A field where particles exist in multiple states simultaneously. Much like my assignments: both submitted and not submitted until the professor observes them.</div>
+        <div class="brm">Read More →</div>
+      </div>
+      <div class="bpv rv" onclick="openPost(2)">
+        <div class="bdt">JANUARY 2025 &nbsp;—&nbsp; 5 MIN READ &nbsp;—&nbsp; ROBOTICS</div>
+        <div class="bttl">I Built a Robot. The Robot Won.</div>
+        <div class="bexc">A deeply personal account of building an autonomous robot arm, inverse kinematics that broke my soul, and why robots deserve the right to throw things.</div>
+        <div class="brm">Read More →</div>
+      </div>
+    </div>
+  </div>
+  <div id="bpfv"><span class="pbk" onclick="closePost()">← Back to Blog</span><div id="pcnt"></div></div>
+  <footer>
+    <div class="ftr">Aditya Pratap Singh<br><span style="color:#252530">© Opinions are mine. Bugs are also mine.</span></div>
+    <div class="ftr" style="text-align:right"><span style="color:#252530">No Stack Overflow answers were harmed. Most were copied.</span></div>
+  </footer>
+</div>
+
+<!-- ██ ABOUT ██ -->
+<div class="page" id="about">
+  <div class="ph">
+    <div class="slbl rv">&gt; about</div>
+    <h1 class="stit rv">The Human<br><span class="g">Behind the Bugs</span></h1>
+  </div>
+  <div class="aly">
+    <div>
+      <div class="abio rv">
+        <p>Hi. I'm <strong>Aditya</strong>. I study quantum physics and astrophysics because apparently regular physics wasn't <em>confusing enough</em> for me.</p>
+        <p>I spend most of my time thinking about the universe, building robots that have a <strong>personality</strong> (mostly chaotic), writing code that <em>technically</em> works, and occasionally spending 3 hours debugging only to discover the problem was a function that simply doesn't exist in Python.</p>
+        <p>My interests include: <strong>quantum mechanics</strong>, <strong>astrophysics</strong>, <strong>modern physics</strong>, <strong>AI/ML</strong>, <strong>robotics</strong>, and staring at compiler errors until they feel bad about themselves.</p>
+        <p>Currently a student. Eventually: someone who fully understands quantum entanglement. Probably. The jury is still in superposition.</p>
+        <p style="color:var(--tdim);font-family:var(--mono);font-size:11px;margin-top:8px;">// diagnosis: physically incapable of writing simple code without overengineering it first</p>
+      </div>
+      <div class="fcts rv">
+        <div class="slbl">&gt; fun_facts.log</div><br>
+        <div class="fct"><div class="fi">→</div><div class="ft">Solved a physics problem at 3am using pure spite as the primary fuel source</div></div>
+        <div class="fct"><div class="fi">→</div><div class="ft">Maintains a scientifically verified minimum of 47 browser tabs at all times</div></div>
+        <div class="fct"><div class="fi">→</div><div class="ft">Spent 3 hours debugging. Fix was <span class="ik">print(x)</span> not <span class="ik">output(x)</span>. We do not speak of this.</div></div>
+        <div class="fct"><div class="fi">→</div><div class="ft">Can explain Schrödinger's cat but genuinely cannot explain why my robot throws things</div></div>
+        <div class="fct"><div class="fi">→</div><div class="ft">The robots are fine. Mostly. The water bottle was not. RIP.</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="slbl rv">&gt; skills.json</div><br>
+      <div id="skw" class="rv">
+        <div class="skr"><div class="skh"><span class="skn">Python</span><span class="sknm">output(x) incident notwithstanding</span></div><div class="skb"><div class="skf" data-w="85"></div></div></div>
+        <div class="skr"><div class="skh"><span class="skn">Physics / Math</span><span class="sknm">theoretically strong</span></div><div class="skb"><div class="skf" data-w="91"></div></div></div>
+        <div class="skr"><div class="skh"><span class="skn">Robotics</span><span class="sknm">the robots mostly survive</span></div><div class="skb"><div class="skf" data-w="75"></div></div></div>
+        <div class="skr"><div class="skh"><span class="skn">AI / Machine Learning</span><span class="sknm">aggressively learning</span></div><div class="skb"><div class="skf" data-w="70"></div></div></div>
+        <div class="skr"><div class="skh"><span class="skn">C++ / Arduino</span><span class="sknm">robots sometimes listen</span></div><div class="skb"><div class="skf" data-w="68"></div></div></div>
+        <div class="skr"><div class="skh"><span class="skn">Debugging</span><span class="sknm">see blog post #1 please</span></div><div class="skb"><div class="skf" data-w="40"></div></div></div>
+        <div class="skr"><div class="skh"><span class="skn">Hubris</span><span class="sknm">off the charts, regrettably</span></div><div class="skb"><div class="skf" data-w="99"></div></div></div>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <div class="ftr">Aditya Pratap Singh<br><span style="color:#252530">© All bugs included, absolutely free of charge.</span></div>
+    <div class="ftr" style="text-align:right"><span style="color:#252530">Powered by caffeine, denial, and theoretical physics.</span></div>
+  </footer>
+</div>
+
+<!-- ██ CONTACT ██ -->
+<div class="page" id="contact">
+  <div class="ph">
+    <div class="slbl rv">&gt; contact</div>
+    <h1 class="stit rv">Don't Be<br><span class="g">a Stranger</span></h1>
+    <p class="rv">Unless you're a recruiter asking me to "work for exposure." Then, absolutely, please be a stranger.</p>
+  </div>
+  <div class="cly">
+    <p class="cin rv">Happy to chat about quantum physics, robotics, AI, collaborations, or anything science-shaped. Response time: somewhere between immediate and heat-death of the universe — depending on assignment load.</p>
+    <form class="cfm rv" method="POST" action="https://api.web3forms.com/submit">
+       <input type="hidden" name="access_key" value="e076a615-d73d-498e-9145-d2609e16d13c">
+      <div class="fg">
+        <label class="fl">Name*</label>
+        <input id="contact_name" name="name" class="fi2" type="text" required placeholder="Your name (aliases accepted, judgement not)" />
+      </div>
+      <div class="fg">
+        <label class="fl">Email*</label>
+        <input id="contact_email" name="email" class="fi2" type="email" required placeholder="your@email.com" />
+      </div>
+      <div class="fg">
+        <label class="fl">Subject*</label>
+        <input id="contact_subject" name="subject" class="fi2" type="text" required placeholder="What's on your mind?" />
+      </div>
+      <div class="fg">
+        <label class="fl">Message</label>
+        <textarea id="contact_message" name="message" class="fta" required placeholder="Say something interesting. Or don't. I'll read it either way."></textarea>
+      </div>
+      <button type="submit" id="fbtn" class="btn bp" style="align-self:flex-start">Send Message</button>
+    </form>
+    <h6>* - necessary field</h6>
+  </div>
+  <footer>
+    <div class="ftr">Aditya Pratap Singh<br><span style="color:#252530">© No rights reserved. Inspired by the entire internet.</span></div>
+    <div class="ftr" style="text-align:right"><span style="color:#252530">Response time may exceed the current age of the universe.</span></div>
+  </footer>
+</div>
+
+<!-- ERROR POPUP -->
+<div id="erp">
+  <div class="erh"><span>UNHANDLED EXCEPTION</span><button class="erx" onclick="closeErr()">✕</button></div>
+  <div class="erb">
+    <div class="ert" id="ert"></div>
+    <div class="erm" id="erm"></div>
+    <div class="ers" id="ers"></div>
+    <div class="era">
+      <button class="ebtn" onclick="closeErr()">Dismiss</button>
+      <button class="ebtn red" onclick="closeErr()">Panic</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+// ── EPIC CURSOR SYSTEM ──
+const cursorCanvas = document.getElementById('cursor-canvas');
+const cursorCtx = cursorCanvas.getContext('2d');
+const dot = document.getElementById('cursor-dot');
+const ring = document.getElementById('cursor-ring');
+const cursorText = document.getElementById('cursor-text');
+
+cursorCanvas.width = window.innerWidth;
+cursorCanvas.height = window.innerHeight;
+window.addEventListener('resize', () => {
+  cursorCanvas.width = window.innerWidth;
+  cursorCanvas.height = window.innerHeight;
+});
+
+let mx = window.innerWidth/2, my = window.innerHeight/2;
+let rx = mx, ry = my;
+let particles = [];
+let sparkTrail = [];
+let hue = 140; // start at green
+let frameCount = 0;
+
+const hoverLabels = {
+  'A': '// click()',
+  'BUTTON': '// execute()',
+  'INPUT': '// type here',
+  '.nav-links a': '// navigate',
+  '.btn': '// run_script()',
+  '.project-card': '// git clone',
+  '.blog-item': '// read_post()',
+  '.contact-card': '// ping()',
+  '.tech-pill': '// import',
+  '.commit-cell': '// blame',
+};
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX;
+  my = e.clientY;
+  dot.style.left = mx + 'px';
+  dot.style.top = my + 'px';
+  cursorText.style.left = mx + 'px';
+  cursorText.style.top = my + 'px';
+
+  // spawn trail particle
+  if (frameCount % 2 === 0) {
+    sparkTrail.push({
+      x: mx, y: my,
+      vx: (Math.random() - 0.5) * 1.5,
+      vy: (Math.random() - 0.5) * 1.5,
+      life: 1,
+      size: Math.random() * 3 + 1,
+      hue: hue,
+    });
+  }
+});
+
+document.addEventListener('mousedown', () => {
+  document.body.classList.add('cursor-click');
+  // burst particles
+  for (let i = 0; i < 20; i++) {
+    const angle = (i / 20) * Math.PI * 2;
+    const speed = Math.random() * 4 + 2;
+    particles.push({
+      x: mx, y: my,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      size: Math.random() * 3 + 1,
+      hue: hue,
+      type: 'burst',
+    });
+  }
+  // ring ripple
+  particles.push({ x: mx, y: my, r: 0, maxR: 80, life: 1, type: 'ripple', hue });
+});
+
+document.addEventListener('mouseup', () => {
+  document.body.classList.remove('cursor-click');
+});
+
+// hover detection
+// hover detection (UPDATED TO MATCH YOUR HTML)
+document.addEventListener('mouseover', e => {
+  // Looking for your actual classes: .prj (projects), .pc (cards), .bpv (blog posts), .tt (tech pills), etc.
+  const el = e.target.closest('a, button, .tt, .prj, .pc, .bpv, .nli');
+  
+  if (el) {
+    document.body.classList.add('cursor-hover');
+    const tag = el.tagName;
+    
+    // Assign the correct hacker text based on the element
+    let label = '// click()';
+    if (tag === 'A' || el.classList.contains('nli')) {
+      label = '// navigate()';
+    } else if (el.classList.contains('prj') || el.classList.contains('pc')) {
+      label = '// execute()';
+    } else if (el.classList.contains('bpv')) {
+      label = '// read_post()';
+    } else if (el.classList.contains('tt')) {
+      label = '// import ' + el.textContent.trim();
+    }
+    
+    cursorText.textContent = label;
+    cursorText.style.opacity = '1';
+  } else {
+    document.body.classList.remove('cursor-hover');
+    cursorText.style.opacity = '0';
+  }
+});
+
+// canvas draw loop
+function drawCursor() {
+  frameCount++;
+  cursorCtx.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
+
+  // smooth ring follow
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  ring.style.left = rx + 'px';
+  ring.style.top = ry + 'px';
+
+  // cycle hue slowly green→cyan→purple→pink→back
+  hue = (hue + 0.3) % 360;
+  const hslColor = `hsl(${hue}, 100%, 60%)`;
+  ring.style.borderColor = hslColor;
+  ring.style.boxShadow = `0 0 10px hsla(${hue},100%,60%,0.4), inset 0 0 8px hsla(${hue},100%,60%,0.05)`;
+  dot.style.boxShadow = `0 0 8px #fff, 0 0 16px ${hslColor}`;
+
+  // draw spark trail
+  sparkTrail.forEach((p, i) => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= 0.06;
+    if (p.life <= 0) { sparkTrail.splice(i, 1); return; }
+    cursorCtx.save();
+    cursorCtx.globalAlpha = p.life * 0.7;
+    cursorCtx.fillStyle = `hsl(${p.hue},100%,65%)`;
+    cursorCtx.shadowColor = `hsl(${p.hue},100%,65%)`;
+    cursorCtx.shadowBlur = 8;
+    cursorCtx.beginPath();
+    cursorCtx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    cursorCtx.fill();
+    cursorCtx.restore();
+  });
+
+  // draw burst particles & ripples
+  particles.forEach((p, i) => {
+    if (p.type === 'ripple') {
+      p.r += (p.maxR - p.r) * 0.1;
+      p.life -= 0.04;
+      if (p.life <= 0) { particles.splice(i, 1); return; }
+      cursorCtx.save();
+      cursorCtx.globalAlpha = p.life * 0.6;
+      cursorCtx.strokeStyle = `hsl(${p.hue},100%,65%)`;
+      cursorCtx.shadowColor = `hsl(${p.hue},100%,65%)`;
+      cursorCtx.shadowBlur = 12;
+      cursorCtx.lineWidth = 1.5;
+      cursorCtx.beginPath();
+      cursorCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      cursorCtx.stroke();
+      cursorCtx.restore();
+    } else {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.1; // gravity
+      p.vx *= 0.97;
+      p.life -= 0.035;
+      if (p.life <= 0) { particles.splice(i, 1); return; }
+      cursorCtx.save();
+      cursorCtx.globalAlpha = p.life;
+      cursorCtx.fillStyle = `hsl(${p.hue},100%,65%)`;
+      cursorCtx.shadowColor = `hsl(${p.hue},100%,65%)`;
+      cursorCtx.shadowBlur = 10;
+      cursorCtx.beginPath();
+      cursorCtx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      cursorCtx.fill();
+      cursorCtx.restore();
+    }
+  });
+
+  // draw connecting line from ring center to dot (if far apart)
+  const dist = Math.hypot(mx - rx, my - ry);
+  if (dist > 5) {
+    cursorCtx.save();
+    cursorCtx.globalAlpha = Math.min(0.3, dist / 200);
+    cursorCtx.strokeStyle = hslColor;
+    cursorCtx.lineWidth = 1;
+    cursorCtx.setLineDash([2, 4]);
+    cursorCtx.beginPath();
+    cursorCtx.moveTo(rx, ry);
+    cursorCtx.lineTo(mx, my);
+    cursorCtx.stroke();
+    cursorCtx.restore();
+  }
+
+  requestAnimationFrame(drawCursor);
+}
+drawCursor();
+
+// ═══ CANVAS ═══
+const cv=document.getElementById('cnv'), ctx=cv.getContext('2d');
+let nds=[],sigs=[];let ccx=-999,ccy=-999;
+function rsz(){cv.width=innerWidth;cv.height=innerHeight;mkNd();}
+function mkNd(){nds=[];const n=Math.max(40,Math.floor(cv.width*cv.height/20000));for(let i=0;i<n;i++)nds.push({x:Math.random()*cv.width,y:Math.random()*cv.height,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,r:Math.random()*1.2+.4});}
+document.addEventListener('mousemove',e=>{ccx=e.clientX;ccy=e.clientY;});
+const MD=130;
+function spS(){if(nds.length<2)return;const a=nds[Math.floor(Math.random()*nds.length)];const nr=nds.filter(n=>{const d=Math.hypot(n.x-a.x,n.y-a.y);return d>1&&d<MD;});if(!nr.length)return;const b=nr[Math.floor(Math.random()*nr.length)];sigs.push({ax:a.x,ay:a.y,bx:b.x,by:b.y,t:0});}
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  for(const n of nds){n.x+=n.vx;n.y+=n.vy;if(n.x<0||n.x>cv.width)n.vx*=-1;if(n.y<0||n.y>cv.height)n.vy*=-1;}
+  for(let i=0;i<nds.length;i++){for(let j=i+1;j<nds.length;j++){const dx=nds[j].x-nds[i].x,dy=nds[j].y-nds[i].y,d=Math.sqrt(dx*dx+dy*dy);if(d<MD){const mxc=(nds[i].x+nds[j].x)/2,myc=(nds[i].y+nds[j].y)/2,cd=Math.hypot(mxc-ccx,myc-ccy),bo=cd<110?(1-cd/110)*.45:0,a=(1-d/MD)*.22+bo;ctx.strokeStyle=`rgba(57,255,20,${a})`;ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(nds[i].x,nds[i].y);ctx.lineTo(nds[j].x,nds[j].y);ctx.stroke();}}}
+  for(const n of nds){const cd=Math.hypot(n.x-ccx,n.y-ccy),gl=cd<90?1-cd/90:0,a=.32+gl*.68;if(gl>.2){ctx.shadowColor='#39FF14';ctx.shadowBlur=10*gl;}ctx.fillStyle=`rgba(57,255,20,${a})`;ctx.beginPath();ctx.arc(n.x,n.y,n.r+gl*2,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+  sigs=sigs.filter(s=>s.t<=1);for(const s of sigs){const dist=Math.hypot(s.bx-s.ax,s.by-s.ay);s.t+=2/dist;const x=s.ax+(s.bx-s.ax)*Math.min(s.t,1),y=s.ay+(s.by-s.ay)*Math.min(s.t,1);ctx.shadowColor='#39FF14';ctx.shadowBlur=7;ctx.fillStyle='#39FF14';ctx.beginPath();ctx.arc(x,y,1.8,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+  if(Math.random()<.05)spS();
+  requestAnimationFrame(draw);
+}
+window.addEventListener('resize',rsz);rsz();draw();
+
+// ═══ SPLASH ═══
+const SL=[
+  {t:'> ADITYA.EXE — SYSTEM BOOT SEQUENCE INITIATED',c:'g'},
+  {t:'> Running pre-flight diagnostics...',c:''},
+  {t:'> IQ Check ..................... LOADING [████████░░] 80%  (generously rounded up)',c:''},
+  {t:'> Humility module .............. NOT FOUND  (search permanently abandoned)',c:'r'},
+  {t:'> Python proficiency ........... MODERATE  (output(x) incident on permanent record)',c:'r'},
+  {t:'> Stack Overflow tabs .......... 47  (well within normal range)',c:'y'},
+  {t:'> Physics knowledge ............ IMPRESSIVE  (for a mortal, at least)',c:'g'},
+  {t:'> Robotics module .............. LOADED  (objects may be thrown — this is a feature)',c:''},
+  {t:"> Quantum understanding ......... SUPERPOSED  (true and false simultaneously — fitting)",c:'y'},
+  {t:'> Caffeine levels .............. CRITICAL  (code quality degrading in real-time)',c:'r'},
+  {t:'> Self-awareness ............... DANGEROUSLY LOW',c:'r'},
+  {t:'> Ego .......................... FILE TOO LARGE TO PARSE',c:'r'},
+  {t:'> Proceeding anyway. God help us all.',c:'g'},
+];
+async function runSplash(){
+  // Check if the user has already seen the splash screen this session
+  const isFast = sessionStorage.getItem('splashSeen') === 'true';
+  
+  // If not, mark that they have seen it now
+  if (!isFast) sessionStorage.setItem('splashSeen', 'true');
+
+  const t=document.getElementById('st');
+  for(let i=0;i<SL.length;i++){
+    // If isFast is true, reduce the delay to almost 0
+    await sleep(isFast ? 5 : (i===0?260:165));
+    const s=document.createElement('span');
+    s.className='sl '+(SL[i].c||'');
+    s.textContent=SL[i].t;
+    t.appendChild(s);
+    await sleep(isFast ? 0 : 12);
+    s.classList.add('on');
+  }
+  
+  await sleep(isFast ? 10 : 360);
+  const bar=document.getElementById('sb');bar.style.opacity='1';
+  
+  await sleep(isFast ? 10 : 80);
+  document.getElementById('sf').style.width='100%';
+  
+  await sleep(isFast ? 50 : 1750);
+  
+  const enterBtn = document.getElementById('se');
+  enterBtn.classList.add('on');
+  enterBtn.focus(); // Automatically focus the button so pressing 'Enter' works
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+runSplash();
+document.getElementById('se').addEventListener('click',()=>{
+  const sp=document.getElementById('splash');
+  sp.style.transition='opacity .8s';sp.style.opacity='0';
+  setTimeout(()=>{sp.style.display='none';startErr();},800);
+});
+
+// ═══ ROUTER ═══
+function go(pg){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('act'));
+  document.getElementById(pg).classList.add('act');
+  document.querySelectorAll('.nli').forEach(l=>l.classList.toggle('act',l.dataset.p===pg));
+  window.scrollTo(0,0);
+  if(pg==='blog'){document.getElementById('blv').style.display='block';document.getElementById('bpfv').classList.remove('act');}
+  if(pg==='about')setTimeout(animSk,550);
+  setTimeout(initRev,80);
+}
+
+// ═══ BLOG ═══
+const POSTS=[
+  {title:'3 Hours, 47 Google Tabs, and One Python Sin',date:'March 2025',
+   html:`<h2>A Story About output(x)</h2><p>It was a perfectly normal Tuesday. I had a Python script. The script needed to display a value. Simple.</p><p>I typed <code>output(x)</code>.</p><p>Python said: <code>NameError: name 'output' is not defined</code></p><p>And thus began the 3-hour odyssey I now refer to as <strong>The Incident</strong>.</p><h2>The Investigation</h2><p>First, I Googled it. "Python output function not working." Normal. Then "Python output(x) NameError." Fine. Then "how to display variable in Python." Slightly concerning. Then "does Python have an output function." Full panic mode.</p><p>I checked Stack Overflow 13 times. Re-read the documentation twice. Watched a "Python for beginners" tutorial. Considered a different career. Longer than briefly considered a nap.</p><h2>The Resolution</h2><p>Three hours in, I re-read the error message one final time.</p><p><code>NameError: name 'output' is not defined</code></p><p>I changed <code>output(x)</code> to <code>print(x)</code>.</p><p>It worked.</p><p>I closed the laptop, went outside, and sat on the ground. I thought about the quantum nature of debugging: the bug exists in superposition — "found" and "not found" — until you stop overthinking and just read the error message like a normal person.</p><h2>Lessons Learned</h2><p>1. The function is <code>print()</code>. It has always been <code>print()</code>.<br>2. Re-read the error message. Then again. Then one more time.<br>3. The simplest answer is usually correct. Except in quantum mechanics.<br>4. I am, in fact, quite fallible.</p><p style="color:var(--tdim);font-family:var(--mono);font-size:11px;margin-top:32px;">// peer-reviewed by no one. errors may be present. deeply ironic.</p>`},
+  {title:'Why Quantum Mechanics Will Break Your Brain (And Career Choices)',date:'February 2025',
+   html:`<h2>The Problem with Quantum</h2><p>So you want to study quantum mechanics. Noble. Brave. Statistically unwise.</p><p>Classical physics: a ball is here, moving this fast, going that way. Comfortable. Predictable. A place of peace.</p><p>Quantum physics: a particle exists in multiple places simultaneously, has no definite momentum until observed, and the act of observing changes it. Also: tunneling. Also: entanglement. Also: <span class="g">why.</span></p><h2>The Superposition of My Assignments</h2><p>I've started thinking of my assignments as quantum objects: both submitted and not submitted, until the professor observes them. The submission deadline collapses the wave function. Usually into "not submitted."</p><p>I'm considering putting this in my thesis. Under methodology.</p><h2>Why I Still Study It</h2><p>Because it's the most honest description of reality we have. Because particles genuinely don't care about your intuitions. Because the universe is deeply, beautifully, maddeningly weird — and I cannot look away.</p><p>The confusion is the point. If you're not confused, you haven't looked closely enough.</p><p style="color:var(--tdim);font-family:var(--mono);font-size:11px;margin-top:32px;">// disclaimer: I am a student. Do not make career decisions based on this blog.</p>`},
+  {title:'I Built a Robot. The Robot Won.',date:'January 2025',
+   html:`<h2>In the Beginning</h2><p>The robot was supposed to be simple. Three degrees of freedom. Inverse kinematics. Pick up an object, place it elsewhere. A solved robotics problem. Textbook material.</p><p>The robot had other plans.</p><h2>The Inverse Kinematics Problem</h2><p>Inverse kinematics: computing what joint angles your robot needs to achieve a desired end-effector position. Known solutions. Textbooks exist.</p><p>My robot decided the correct position was pointing its arm directly at my face.</p><p>I debugged the math for four hours. The issue was a single sign error in the Jacobian matrix. One minus sign. Four hours. I thought about this a lot in the shower.</p><h2>The Throwing</h2><p>After fixing the kinematics, the robot worked beautifully — smooth, ±2mm precision. I was proud. I changed one parameter to test a higher speed.</p><p>The object flew across the room.</p><p>The robot wasn't malicious. Just enthusiastic. There's something admirable about that, honestly.</p><h2>Status: Ongoing</h2><p>The robot still occasionally throws things. I've reframed this as "rapid object deployment to target locations." My portfolio is better for it.</p><p style="color:var(--tdim);font-family:var(--mono);font-size:11px;margin-top:32px;">// all thrown objects survived. the water bottle did not. rest in peace.</p>`}
+];
+
+function openPost(i){
+  const p=POSTS[i];
+  document.getElementById('blv').style.display='none';
+  const v=document.getElementById('bpfv');v.classList.add('act');
+  document.getElementById('pcnt').innerHTML=`<div class="slbl">&gt; blog — ${p.date}</div><h1 style="font-family:var(--disp);font-size:clamp(28px,5vw,52px);font-weight:800;letter-spacing:-.025em;margin:14px 0 44px;line-height:1.1">${p.title}</h1><div class="pbdy">${p.html}</div>`;
+  window.scrollTo(0,0);
+}
+function closePost(){document.getElementById('blv').style.display='block';document.getElementById('bpfv').classList.remove('act');window.scrollTo(0,0);}
+
+// ═══ TAGLINES ═══
+const TGS=["Trying to understand the universe. The universe is not cooperating.","Quantum physicist in training. Professional bug creator.","I debug reality. The fix is usually a semicolon.","Somewhere between E=mc² and 3 hours fixing a typo.","Physics, code, and occasional existential crises.","output(x) is not a function. I know that now.","Building the future, one unhandled exception at a time."];
+let ti=0;const tEl=document.getElementById('tgt');
+tEl.style.transition='opacity .4s,transform .4s';tEl.textContent=TGS[0];
+setInterval(()=>{tEl.style.opacity='0';tEl.style.transform='translateY(8px)';setTimeout(()=>{ti=(ti+1)%TGS.length;tEl.textContent=TGS[ti];tEl.style.opacity='1';tEl.style.transform='translateY(0)';},420);},3600);
+
+// ═══ NAV SCROLL ═══
+window.addEventListener('scroll',()=>document.getElementById('nav').classList.toggle('sc',scrollY>36));
+
+// ═══ REVEAL ═══
+function initRev(){
+  const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vs');obs.unobserve(e.target);}});},{threshold:.1,rootMargin:'0px 0px -36px 0px'});
+  document.querySelectorAll('.page.act .rv').forEach(el=>obs.observe(el));
+}
+initRev();
+
+// ═══ CONTACT ═══
+
+
+// ═══ SKILL BARS ═══
+function animSk(){document.querySelectorAll('.skf').forEach(b=>{b.style.width=b.dataset.w+'%';});}
+
+// ═══ ERRORS ═══
+const ERRS=[
+  {t:'TypeError',m:"Aditya.debugging_skills() returned undefined\n\nExpected: working code\nReceived: 3 hours of confusion and an existential crisis",s:"at output.js:404  (line doesn't exist, obviously)\nat reality.exe:∞\nat main.py:1  (it was always line 1)"},
+  {t:'NameError',m:"name 'output' is not defined\n\nDid you mean: print(x)?\nGoogled for 3 hrs: yes.  Found answer: also yes. Eventually.",s:"at debugger.py:the_line_we_dont_speak_of\nat stackoverflow.com:answer_23  (ignored)\nat coffee.exe  (timeout — caffeine depleted)"},
+  {t:'RuntimeError',m:"Aditya has been staring at this screen for 3+ hours\n\nTrace confirms this is not the first occurrence.\nRecommendation: take a walk\nWill he: absolutely not",s:"at procrastination.js:∞\nat hubris.py:99\nat main.py  (wrong language again, somehow)"},
+  {t:'OverconfidenceError',m:"Aditya.estimate_time('fix bug') returned '5 minutes'\nActual time: 4 hours 23 minutes\n\nThis exception has been raised 847 times. No improvement.",s:"at time_estimation.py:delusional\nat git.commit('final fix FINAL v3 THIS IS THE ONE')"},
+  {t:'CaffeineWarning',m:"Caffeine below operational threshold.\nCode quality degraded ~73%.\n\nLast 3 commits: 'fix', 'fix2', 'please work I am begging you'",s:"at coffee_machine.py:empty\nat motivation.exe:not_responding\nat focus.dll:missing"},
+  {t:'RoboticsException',m:"robot.place_object() executed\nObject destination: floor  (unintended)\nObject velocity at impact: concerning\n\nThe robot is fine. The water bottle was not.",s:"at inverse_kinematics.cpp:enthusiastic\nat servo_controller.ino:yeet()\nat physics.h:newton_is_watching_you"}
+];
+let et;
+function showErr(){const e=ERRS[Math.floor(Math.random()*ERRS.length)];document.getElementById('ert').textContent=e.t;document.getElementById('erm').textContent=e.m;document.getElementById('ers').textContent=e.s;document.getElementById('erp').classList.add('vis');schedErr();}
+function closeErr(){document.getElementById('erp').classList.remove('vis');}
+function schedErr(){clearTimeout(et);et=setTimeout(showErr,50000+Math.random()*65000);}
+function startErr(){if(Math.random()<.28)setTimeout(showErr,8500);else schedErr();}
+
+// ═══ CONTACT ═══
+function hForm(e){e.preventDefault();const b=document.getElementById('fbtn');b.textContent='Message Sent ✓';b.style.cssText='background:transparent;color:var(--green);border:1px solid var(--green);font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:13px 28px;cursor:pointer;';setTimeout(()=>{b.textContent='Send Message';b.style.cssText='';e.target.reset();},3000);}
+</script>
+</body>
+</html>
