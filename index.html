@@ -148,6 +148,7 @@
     .prj:hover::after{opacity:1;}
     .ptg{font-family:var(--mono);font-size:10px;letter-spacing:.15em;color:var(--green);text-transform:uppercase;margin-bottom:14px;opacity:.7;}
     .pttl{font-family:var(--disp);font-size:21px;font-weight:700;margin-bottom:12px;line-height:1.2;}
+    .ptt1:hover{color:skyblue;cursor:pointer;font-style:italic;}
     .pdsc{font-size:14px;color:var(--tmid);line-height:1.65;margin-bottom:26px;}
     .tch{display:flex;gap:8px;flex-wrap:wrap;}
     .tt{font-family:var(--mono);font-size:10px;padding:3px 9px;border:1px solid var(--bdr);color:var(--tdim);letter-spacing:.06em;}
@@ -273,6 +274,15 @@
       /* Project cards */
       .pgr{grid-template-columns:1fr;}
 
+      /* FADING */
+      .fade{opacity: 0.5;}
+
+      /* Disable click and fade for mobile */
+      .mobile-no-click {
+        pointer-events: none;
+        opacity: 0.5;
+      }
+
       /* Splash screen */
       #st{font-size:11px;}
       #se{padding:10px 24px;font-size:11px;}
@@ -337,7 +347,7 @@
         <div class="cd">Simulates superposition &amp; entanglement. Results may or may not be correct. Schrödinger couldn't tell either.</div>
         <div class="cl">Explore</div>
       </div>
-      <div class="pc" onclick="go('projects')">
+      <div class="pc mobile-no-click" onclick="go('projects')">
         <div class="cn">02 — Robotics</div><div class="ct" onclick="window.location.href='pages/roboarm.html'">Autonomous Robot Arm</div>
         <div class="cd">Designed to pick and place objects. Currently picks up objects and gently <span class="g">flings</span> them. Progress, arguably.</div>
         <div class="cl">Explore</div>
@@ -389,14 +399,14 @@
     <div class="prj rv" onclick="window.location.href='pages/quantum_sim.html'"><div class="ptg">Quantum Physics</div><div class="pttl">Quantum State Simulator</div>
       <div class="pdsc">A Python simulation of quantum superposition, entanglement, and measurement collapse. Now I can confuse myself with both code AND mathematics simultaneously. An achievement.</div>
       <div class="tch"><span class="tt">Python</span><span class="tt">NumPy</span><span class="tt">Matplotlib</span></div></div>
-    <div class="prj rv" onclick="window.location.href='pages/roboarm.html'"><div class="ptg">Robotics</div><div class="pttl">Autonomous Robot Arm</div>
-      <div class="pdsc">Designed, built, and programmed a 3-DOF robot arm with inverse kinematics. Achieves ±2mm precision. Or throws things. Depends on its mood, frankly.</div>
+    <div class="prj rv mobile-no-click" onclick="window.location.href='pages/roboarm.html'"><div class="ptg fade">Robotics</div><div class="pttl fade">Autonomous Robot Arm</div>
+      <div class="pdsc fade">Designed, built, and programmed a 3-DOF robot arm with inverse kinematics. Achieves ±2mm precision. Or throws things. Depends on its mood, frankly.</div>
       <div class="tch"><span class="tt">C++</span><span class="tt">Arduino</span><span class="tt">Inv. Kinematics</span></div></div>
     <div class="prj rv" onclick="window.location.href='pages/neunet.html'"><div class="ptg">Machine Learning</div><div class="pttl">Neural Network from Scratch</div>
       <div class="pdsc">No PyTorch. No TensorFlow. Just NumPy, pain, and the sheer audacity to backpropagate by hand. 92% MNIST accuracy. My confidence: considerably lower.</div>
       <div class="tch"><span class="tt">Python</span><span class="tt">NumPy</span><span class="tt">Math (sadly)</span></div></div>
-    <div class="prj rv" onclick="window.location.href='pages/blackholesim.html'"><div class="ptg">Astrophysics</div><div class="pttl">Stellar Object Visualizer</div>
-      <div class="pdsc">Interactive, scientifically-accurate 3D visualization of stellar phenomena — including Black Holes, Pulsars, and Main Sequence stars, featuring relativistic effects.</div>
+    <div class="prj rv mobile-no-click" onclick="window.location.href='pages/blackholesim.html'"><div class="ptg fade">Astrophysics</div><div class="pttl fade">Stellar Object Visualizer</div>
+      <div class="pdsc fade">Interactive, scientifically-accurate 3D visualization of stellar phenomena — including Black Holes, Pulsars, and Main Sequence stars, featuring relativistic effects.</div>
       <div class="tch"><span class="tt">Three.js</span><span class="tt">WebGL</span><span class="tt">GLSL</span></div></div>
     <div class="prj rv"><div class="ptg">Quantum Computing</div><div class="pttl">Quantum Gates Playground</div>
       <div class="pdsc">Interactive web app for visualizing quantum gate operations on a Bloch sphere. Great for learning. Also great for staring into the void with a sense of purpose.</div>
